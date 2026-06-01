@@ -1,0 +1,37 @@
+{
+  "name": "policy-authoring",
+  "version": "0.1.0",
+  "description": "Reusable policy and requirements authoring skills for building, editing, auditing, and rendering UC/PR/FN/sub-function and PG/PI policy specs.",
+  "author": {
+    "name": "MyPart Policy Team",
+    "url": "https://github.com/yhgoon277"
+  },
+  "homepage": "https://github.com/yhgoon277/policy-authoring-skills",
+  "repository": "https://github.com/yhgoon277/policy-authoring-skills",
+  "keywords": [
+    "policy",
+    "requirements",
+    "spec",
+    "정책서",
+    "기능명세",
+    "정합성"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Policy Authoring",
+    "shortDescription": "정책서 작성·검증 방법론 스킬 세트",
+    "longDescription": "Five reusable skills for policy and requirements authoring: hierarchy decomposition, naming readability, policy-detail authoring, integrity audit, and new-module setup. The bundled Python tools use a canonical spec JSON and policy_config.json so the workflow can move across project folders and source formats.",
+    "developerName": "MyPart Policy Team",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use Policy Authoring to set up a new policy module.",
+      "Audit this policy spec for ID integrity.",
+      "Rewrite these policy details with tables and review flags."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

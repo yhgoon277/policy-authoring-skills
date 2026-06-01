@@ -1,8 +1,15 @@
 # Codex 인수인계: `policy-authoring` 스킬 세트 — Codex 호환성 검증 및 문서 보강
 
+> **Codex 검증 메모(2026-06-01)**: 이 레포에는 이제 Codex 전용
+> `plugins/policy-authoring/.codex-plugin/plugin.json`과
+> `.agents/plugins/marketplace.json`이 추가되어 Codex app/CLI 플러그인 설치를 지원한다.
+> 직접 `.agents/skills`에 복사하는 방식도 계속 가능하다. 최신 설치 절차는 `README.md`와
+> `INSTALL.md`를 우선한다.
+
 > 이 문서는 **Codex(앱/CLI/IDE)** 에게 주는 작업 지시서다. Codex는 이 레포를 받은(클론한) 상태에서
 > 아래를 **직접 실행·검증**하고, 필요한 문서 보강을 제안/반영한 뒤 결과를 보고한다.
-> 이 스킬 세트는 Claude 환경에서 제작됐고 Codex에서의 실제 동작은 **아직 검증되지 않았다**(빌드 머신에 Codex 부재).
+> 이 스킬 세트는 Claude 환경에서 제작됐고, 이 인수인계서 원문 작성 시점에는 Codex에서의 실제 동작이
+> **아직 검증되지 않았다**(빌드 머신에 Codex 부재).
 
 ## 0. 당신(Codex)이 할 일
 1. 이 레포의 스킬 5종을 **Codex에 설치**한다.

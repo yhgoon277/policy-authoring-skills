@@ -1,0 +1,6 @@
+interface:
+  display_name: "Policy Integrity Audit"
+  short_description: "정책 스펙 ID 정합성을 감사합니다"
+  default_prompt: "Use $policy-integrity-audit to audit this policy spec for ID and hierarchy integrity."
+policy:
+  allow_implicit_invocation: true

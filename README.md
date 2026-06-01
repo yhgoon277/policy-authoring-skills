@@ -1,8 +1,9 @@
 # policy-authoring — 정책서 작성 방법론 스킬 세트
 
 통신 정책서 한 모듈("청구및수납관리")을 수개월에 걸쳐 정비하며 정착한 **작성·검증 방법론**을
-재사용 가능한 **Claude Skill 세트**로 묶은 것입니다 — **claude.ai / Claude Desktop**(Skills 업로드)과
-**Claude Code**(플러그인) 양쪽에서 씁니다. **다른 정책 모듈에도 동일 품질로** 적용하고 **팀원과 공유**하기 위한 것입니다.
+재사용 가능한 **Claude/Codex Skill 세트**로 묶은 것입니다 — **claude.ai / Claude Desktop**(Skills 업로드),
+**Claude Code**(플러그인), **Codex app/CLI**(Codex 플러그인 또는 `.agents/skills`)에서 씁니다.
+**다른 정책 모듈에도 동일 품질로** 적용하고 **팀원과 공유**하기 위한 것입니다.
 
 ## 무엇이 들어있나 (5개 스킬)
 
@@ -27,6 +28,26 @@
 /plugin install policy-authoring@mypart-skills
 /policy-authoring-setup        # 새 모듈 세팅 단계별 안내
 ```
+
+### Codex app (같은 workspace 팀원)
+1. 배포자가 이 repo의 Codex 플러그인(`policy-authoring`)을 설치합니다.
+2. Codex app의 plugin details에서 **Share**를 눌러 workspace 팀원에게 공유합니다.
+3. 팀원은 공유된 플러그인을 설치한 뒤 새 대화에서 `policy-*` 5개 스킬이 보이는지 확인합니다.
+
+### Codex CLI (GitHub marketplace)
+```bash
+codex plugin marketplace add yhgoon277/policy-authoring-skills --ref main
+codex plugin add policy-authoring@policy-authoring-skills
+codex plugin list
+```
+
+### Codex 직접 설치 (`.agents/skills`)
+```bash
+mkdir -p ~/.agents/skills
+cp -R plugins/policy-authoring/skills/* ~/.agents/skills/
+```
+
+팀 repo에 함께 두려면 5개 스킬 폴더를 해당 repo의 `.agents/skills/`에 체크인합니다. 플러그인 배포를 쓰지 않는 임시·개인 설치에 적합합니다.
 
 ## 이식성 — 어떻게 내 프로젝트에 맞추나
 도구(audit·build·render)는 **표준 spec JSON 스키마**를 인터페이스로 씁니다. 내 소스(스프레드시트·문서 등)를

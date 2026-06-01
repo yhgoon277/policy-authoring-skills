@@ -1,0 +1,6 @@
+interface:
+  display_name: "Policy Naming Readability"
+  short_description: "정책 명칭과 설명을 쉽게 다듬습니다"
+  default_prompt: "Use $policy-naming-readability to make these policy names and descriptions planner-friendly."
+policy:
+  allow_implicit_invocation: true

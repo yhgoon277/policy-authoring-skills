@@ -1,12 +1,11 @@
 ---
 name: policy-hierarchy-decomposition
 description: Design and decompose a policy specification's UC→Process(PR)→Function(FN)→sub-function hierarchy. Use this whenever the user is building or revising a policy/requirements spec and needs to split a process into functions, decide sub-function granularity, assign new function IDs, write function descriptions, or handle multi-party (1:N) flows such as delegation, split-payment, backup payment methods, shared limits, or family billing. Trigger on phrases like "기능 분화", "PR을 FN으로 나눠", "프로세스를 기능으로", "세부기능 정리", "process decomposition", "function breakdown", or when reviewing whether an existing decomposition is correct. Even when the user does not say "분화" explicitly, prefer this skill whenever the task is about the shape of the function layer rather than naming or policy-detail content.
-version: 0.1.0
 ---
 
 # 정책 계층·기능 분화 (Policy Hierarchy & PR-FN Decomposition)
 
-> **claude.ai에서**: 작업 대상(스펙 일부·프로세스 설명 등)을 대화에 붙여넣거나 업로드하고 적용을 요청하면 가이드대로 동작한다. 효과를 온전히 보려면 5개 스킬을 함께 업로드한다.
+> **Claude/Codex에서**: 작업 대상(스펙 일부·프로세스 설명 등)을 대화에 붙여넣거나 업로드하고 적용을 요청하면 가이드대로 동작한다. 효과를 온전히 보려면 `policy-*` 5개 스킬을 함께 설치한다.
 
 정책 명세의 기능 레이어를 **기획자·개발자가 바로 화면을 그릴 수 있는** 단위로 쪼개고 묶는 방법.
 

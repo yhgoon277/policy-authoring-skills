@@ -1,12 +1,11 @@
 ---
 name: policy-authoring-setup
 description: Set up a NEW policy/requirements module to use the policy-authoring skill set, even when the team's project folders and source-document formats differ from the reference project. Use this when a teammate first installs these skills, onboards a new policy module, asks "how do I use these skills on my project", needs to convert their source docs into the canonical spec JSON schema, pick a business code, lay out the project folders, install the build/audit/render tool templates, generate policy_config.json, or run the first build→audit→render smoke test. Trigger on "스킬 설치", "온보딩", "새 모듈 세팅", "프로젝트 세팅", "setup", "how to use these skills", "다른 정책에 적용", "처음 시작". This is the entry point that wires up the other four skills for a project.
-version: 0.1.0
 ---
 
 # 정책서 작성 온보딩·설치 (Setup & Onboarding)
 
-> **claude.ai에서**: 이 스킬의 디렉터리·터미널 절차는 **Claude Code(로컬 프로젝트)** 기준이다. claude.ai에서는 로컬 `tools/` 대신 — Settings → Capabilities에서 **Code Execution을 켜고**, 스펙 JSON을 대화에 업로드한 뒤 이 스킬 `assets/tools/`의 스크립트(audit·build·render) 실행을 요청하면 된다. 표준 스키마(`assets/schema/`)·config(`assets/policy_config.*.json`) 안내는 양쪽 공통.
+> **Claude/Codex에서**: 이 스킬의 디렉터리·터미널 절차는 로컬 프로젝트 기준이다. claude.ai에서는 Code Execution에 스펙 JSON을 올려 이 스킬 `assets/tools/`의 스크립트(audit·build·render) 실행을 요청하고, Codex에서는 로컬 셸에서 같은 스크립트를 실행한다. 표준 스키마(`assets/schema/`)·config(`assets/policy_config.*.json`) 안내는 모든 환경 공통이다.
 
 새 정책 모듈을, 팀원의 **임의의 프로젝트 폴더·소스 형식**에서 이 스킬 세트로 작업할 수 있게 세팅한다.
 핵심 통찰: 도구(audit·build·render)는 **표준 spec JSON 스키마**를 인터페이스로 쓴다 — 팀원 소스를
@@ -15,7 +14,7 @@ version: 0.1.0
 > 이 스킬은 **대화형**이다. 아래 순서대로 진행하되, 각 단계에서 사용자에게 확인하고 다음으로 간다.
 
 ## 사전 점검
-- 스킬이 설치돼 있어야 한다(이 스킬이 떴다면 설치됨). 설치 방법은 배포 패키지의 INSTALL.md / README 참고(claude.ai = Skills 업로드 / Claude Code = 마켓플레이스 추가).
+- 스킬이 설치돼 있어야 한다(이 스킬이 떴다면 설치됨). 설치 방법은 배포 패키지의 INSTALL.md / README 참고(claude.ai = Skills 업로드 / Claude Code = Claude 마켓플레이스 / Codex = Codex 플러그인 또는 `.agents/skills`).
 - 작업 대상은 **사용자의 프로젝트 루트**. 이 스킬의 자산은 `assets/` 아래에 있다(아래에서 복사해 쓴다).
 
 ---
@@ -59,6 +58,7 @@ mkdir -p <project>/{samples,tools,audit,schema}
    - `business_code`·`module_title`
    - `baseline_spec_path`·`spec_path`·`preview_out`
    - `term_replacements`(레거시→최종 용어. 예 `{"구시스템":"신시스템"}`. 없으면 `{}`)
+   - `pi_content_overrides`·`ui_subfns`·`fn_desc_overrides`: 처음엔 비워둔다. 간단한 모듈이나 smoke test는 config에 바로 채우고, 대량 작성은 `build_spec.py`의 상수 영역으로 옮겨 관리해도 된다.
    - `expected_counts`는 **처음엔 비워둔다**(`{}`) — 5단계에서 안정화 후 실측치를 넣어 회귀 가드로.
    - `known_pr_only`·`pr_pi_remove`·`manual_pg_fallback`은 처음엔 비워둔다(감사 결과 보고 채운다).
    - 막히면 채워진 실제 예시 참고 → [assets/policy_config.example.json](assets/policy_config.example.json).
@@ -70,7 +70,7 @@ python3 tools/build_spec.py --config=policy_config.json        # baseline → sp
 python3 tools/audit_id_integrity.py --config=policy_config.json # STRUCTURAL 0 목표
 python3 tools/render_preview.py --config=policy_config.json     # preview_out HTML
 ```
-- **build_spec.py**의 `PI_CONTENT_OVERRIDES`는 비어 있으면 정책 상세가 안 채워진다. 골격만 통과시키려면 빈 채로 돌려 파이프라인(롤업·trace_matrix·카운트)이 도는지 본다.
+- **build_spec.py**의 `PI_CONTENT_OVERRIDES` 또는 config의 `pi_content_overrides`가 비어 있으면 정책 상세 매핑이 안 채워진다. 골격만 볼 때는 빈 채로 돌리고, 정합성까지 보려면 최소 1개 PI에 `applies_to`를 지정한다.
 - audit가 STRUCTURAL>0이면 거의 항상 **롤업 재계산 누락**이나 **참조 오타** → `policy-integrity-audit` 스킬로 진단.
 - 안정화되면 audit가 출력한 **실측 카운트**를 `expected_counts`에 고정 → 이후 누수 자동 검출.
 

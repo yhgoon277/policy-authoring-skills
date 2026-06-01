@@ -7,6 +7,10 @@
   "spec_path": "samples/NC_청구및수납관리_정책서_간소화_v1.1_spec.json",
   "preview_out": "samples/NC_청구및수납관리_정책서_간소화_preview.html",
 
+  "pi_content_overrides": {},
+  "ui_subfns": [],
+  "fn_desc_overrides": {},
+
   "term_replacements": {
     "T world": "Next Channel",
     "SWING": "BSS"

@@ -8,6 +8,7 @@
 - **사용 환경 (둘 중 하나)**
   - **claude.ai / Claude Desktop** (Free~Enterprise) — Settings → Capabilities에서 **Code Execution·File Creation 켜기** 필수(스킬 스크립트 실행 전제). Team/Enterprise는 관리자가 Org 설정에서 Skills+Code Execution 활성화.
   - **Claude Code** (플러그인·스킬 지원 버전).
+  - **Codex app / Codex CLI** (Codex 플러그인 또는 `.agents/skills` 지원 버전).
 - **python3** (3.8+; 도구는 표준 라이브러리만 — 추가 설치 불필요). claude.ai는 내장 코드 실행을 사용.
 - **git** (Claude Code 마켓플레이스 설치 또는 팀 배포 시).
 
@@ -29,9 +30,46 @@ git 저장소로 올렸다면(아래 6장):
 ```
 로컬 경로도 가능: `/plugin marketplace add /path/to/policy-authoring-skills`. CLI는 `claude plugin marketplace add <경로>` → `claude plugin install policy-authoring@mypart-skills`.
 
+### 방식 C — Codex app (workspace 공유 · 권장)
+같은 ChatGPT/Codex workspace 팀원에게는 Codex 플러그인 공유가 가장 간단합니다.
+
+1. 배포자가 Codex app에서 이 repo의 Codex 플러그인(`policy-authoring`)을 설치합니다.
+2. plugin details에서 **Share**를 눌러 workspace 팀원에게 공유합니다.
+3. 팀원은 공유된 플러그인을 설치한 뒤 새 대화에서 `policy-*` 5개 스킬이 보이는지 확인합니다.
+
+GitHub repo는 source of truth로 유지하고, app 공유는 팀원 설치 UX를 단순하게 만드는 배포면으로 봅니다.
+
+### 방식 D — Codex CLI (GitHub marketplace · 재현 가능한 설치)
+repo 루트의 `.agents/plugins/marketplace.json`이 Codex marketplace entry입니다.
+
+```bash
+codex plugin marketplace add yhgoon277/policy-authoring-skills --ref main
+codex plugin add policy-authoring@policy-authoring-skills
+codex plugin list
+```
+
+로컬 clone으로 검증할 때는 현재 사용자 설정을 오염시키지 않도록 임시 `CODEX_HOME`을 권장합니다.
+
+```bash
+CODEX_HOME=/tmp/codex-policy-test codex plugin marketplace add /path/to/policy-authoring-skills
+CODEX_HOME=/tmp/codex-policy-test codex plugin add policy-authoring@policy-authoring-skills
+CODEX_HOME=/tmp/codex-policy-test codex plugin list
+```
+
+### 방식 E — Codex 직접 설치 (`.agents/skills` · 임시/개인)
+플러그인 공유나 marketplace 없이 5개 스킬 폴더를 직접 둘 수도 있습니다.
+
+```bash
+mkdir -p ~/.agents/skills
+cp -R plugins/policy-authoring/skills/* ~/.agents/skills/
+```
+
+팀 repo에 함께 두려면 해당 작업 repo의 `.agents/skills/`에 5개 스킬 폴더를 체크인합니다.
+
 ### 1-1. 설치 확인
 - **claude.ai**: Skills 목록에 `policy-*` 5개가 보이면 OK.
 - **Claude Code**: `claude plugin list` → `policy-authoring@mypart-skills : enabled`. 새 세션에서 5개 스킬(`policy-*`)이 사용 가능 목록에 노출.
+- **Codex app/CLI**: `codex plugin list`에 `policy-authoring@policy-authoring-skills`가 installed/enabled로 보이고, 새 대화의 스킬 목록에 `policy-*` 5개가 노출되면 OK. 직접 설치라면 `~/.agents/skills` 또는 repo `.agents/skills` 아래 5개 폴더가 있으면 됩니다.
 
 ---
 
@@ -66,6 +104,7 @@ skills/policy-authoring-setup/assets/tools/render_preview.py  → tools/render_p
 `assets/policy_config.template.json` 을 프로젝트 루트로 복사해 채웁니다:
 - `business_code`·`module_title`
 - `baseline_spec_path`·`spec_path`·`preview_out`
+- `pi_content_overrides`·`ui_subfns`·`fn_desc_overrides`: 처음엔 비움(스모크 테스트나 소규모 모듈은 config에 직접 작성 가능)
 - `term_replacements`: 레거시→최종 용어(없으면 `{}`)
 - `expected_counts`: **처음엔 `{}`** — 안정화 후 실측치 고정(회귀 가드)
 - `known_pr_only`·`pr_pi_remove`·`manual_pg_fallback`: 처음엔 비움(감사 보고 채움)
@@ -108,13 +147,23 @@ claude plugin uninstall policy-authoring@mypart-skills
 claude plugin marketplace remove mypart-skills
 ```
 
+Codex CLI 설치를 쓴 경우:
+```bash
+codex plugin marketplace upgrade policy-authoring-skills
+codex plugin remove policy-authoring@policy-authoring-skills
+codex plugin marketplace remove policy-authoring-skills
+```
+
 ## 6. 팀 배포 (배포자용)
-1. `policy-authoring-skills/` 디렉터리를 **독립 git 저장소**로 올립니다(이 폴더가 마켓플레이스 루트 = `.claude-plugin/marketplace.json` 포함).
-2. 팀원에게 저장소 URL 공유 → 각자 `1장 방식 A`로 설치.
-3. 스킬 개선 시 저장소에 push → 팀원은 `marketplace update` 로 갱신.
+1. `policy-authoring-skills/` 디렉터리를 **독립 git 저장소**로 올립니다. 이 폴더가 Claude marketplace 루트(`.claude-plugin/marketplace.json`)이면서 Codex marketplace 루트(`.agents/plugins/marketplace.json`)입니다.
+2. Codex app 팀원에게는 배포자가 플러그인을 설치한 뒤 plugin details의 **Share**로 공유합니다.
+3. CLI 중심 팀원에게는 `방식 D` 명령을 안내합니다.
+4. claude.ai / Claude Desktop 팀원에게는 기존 `dist/`의 스킬 ZIP 5개 또는 `policy-authoring-skills-all.zip`을 안내합니다.
+5. 스킬 개선 시 저장소에 push → Codex/Claude Code 사용자는 각자 marketplace update로 갱신하고, app 공유 플러그인은 새 버전 설치·공유 흐름으로 갱신합니다.
 
 ## 7. 트러블슈팅
 - **스킬이 안 뜸**: `claude plugin list` 로 enabled 확인 → 새 세션 시작. 마켓플레이스 검증 실패 시 `marketplace update` 출력의 오류(주로 SKILL.md frontmatter 또는 JSON 문법) 확인.
+- **Codex 플러그인이 안 뜸**: `codex plugin marketplace list`에서 `policy-authoring-skills`가 보이는지 확인 → 없으면 `codex plugin marketplace add ...` 재실행. `codex plugin list`에서 installed/enabled인지 확인한 뒤 새 대화를 시작합니다.
 - **audit STRUCTURAL>0**: 거의 항상 롤업 재계산 누락 또는 참조 오타 → `policy-integrity-audit` 스킬로 진단(보통 build의 rebuild_rollups가 정정).
 - **카운트가 매 빌드 +1로 샘**: baseline을 다시 빌드 입력으로 쓰는 구성에서 옛/새 id 불일치 PI가 생기는 경우 — `pr_pi_remove`/정리로 끝단 차단.
 - **본문에 레거시 용어 잔존**: `term_replacements` 확인. 근거(`source_note` 등)는 의도적으로 치환 제외(원형 보존).

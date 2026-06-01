@@ -1,12 +1,11 @@
 ---
 name: policy-integrity-audit
 description: Audit a policy spec's ID and hierarchy integrity end-to-end (UC→PR→FN→sub-function, PR→PG→PI, FN↔PI) and repair stale rollups. Use this whenever the user wants to verify referential and bidirectional consistency, coverage, counts, and trace-matrix freshness of a policy/requirements spec, or sees broken links, orphaned items, or mismatched counts after editing. The audit separates STRUCTURAL violations (deterministically fixable, must reach 0) from SEMANTIC ones (need human judgment). Trigger on "정합성 검토", "ID 감사", "연결관계 확인", "rollup 재계산", "STRUCTURAL", "consistency check", "audit the spec", "기능-PI 연결", or run it automatically after any bulk edit to a spec to confirm nothing broke. Prefer this skill whenever correctness/consistency of the spec graph is in question.
-version: 0.1.0
 ---
 
 # ID 정합성 감사 (Policy Spec Integrity Audit)
 
-> **claude.ai에서**: Settings → Capabilities에서 **Code Execution을 켜고**, 점검할 스펙 JSON을 대화에 업로드한 뒤 이 스킬의 동봉 스크립트(`scripts/audit_id_integrity.py`) 실행을 요청한다. 5개 스킬을 함께 업로드하면 상호참조가 완전해진다.
+> **Claude/Codex에서**: 점검할 스펙 JSON과 `policy_config.json`을 준비한 뒤 이 스킬의 동봉 스크립트(`scripts/audit_id_integrity.py`) 실행을 요청한다. `policy-*` 5개 스킬을 함께 설치하면 상호참조가 완전해진다.
 
 정책 명세의 계층 ID 연결을 **전수·결정론적으로** 검사하고, 어긋난 롤업을 고치는 방법.
 

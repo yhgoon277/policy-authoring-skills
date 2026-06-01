@@ -1,0 +1,6 @@
+interface:
+  display_name: "Policy Detail Authoring"
+  short_description: "정책 상세를 표와 검토 배지로 작성합니다"
+  default_prompt: "Use $policy-detail-authoring to rewrite these policy items with tables, evidence, and review flags."
+policy:
+  allow_implicit_invocation: true

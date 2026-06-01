@@ -1,0 +1,6 @@
+interface:
+  display_name: "Policy Hierarchy Decomposition"
+  short_description: "정책 계층과 기능 분화를 설계합니다"
+  default_prompt: "Use $policy-hierarchy-decomposition to split this policy process into functions and sub-functions."
+policy:
+  allow_implicit_invocation: true

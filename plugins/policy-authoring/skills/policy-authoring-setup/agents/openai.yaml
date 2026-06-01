@@ -1,0 +1,6 @@
+interface:
+  display_name: "Policy Authoring Setup"
+  short_description: "새 정책 모듈 온보딩을 세팅합니다"
+  default_prompt: "Use $policy-authoring-setup to set up these policy authoring skills for a new module."
+policy:
+  allow_implicit_invocation: true

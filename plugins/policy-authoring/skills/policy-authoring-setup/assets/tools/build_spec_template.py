@@ -8,8 +8,9 @@
   4) apply_term_replacements ← 맨 마지막. 레거시→최종 용어(근거 필드 제외).
   5) 저장 + 카운트 출력
 
-골격(3·4·main)은 그대로 두고, 아래 PI_CONTENT_OVERRIDES / UI_SUBFNS / FN_DESC_OVERRIDES 만
-자기 모듈 값으로 채운다. (작성 규칙 = policy-detail-authoring 스킬 / FN 설명 = policy-hierarchy-decomposition 스킬)
+골격(3·4·main)은 그대로 두고, 아래 PI_CONTENT_OVERRIDES / UI_SUBFNS / FN_DESC_OVERRIDES 또는
+config의 pi_content_overrides / ui_subfns / fn_desc_overrides 만 자기 모듈 값으로 채운다.
+(작성 규칙 = policy-detail-authoring 스킬 / FN 설명 = policy-hierarchy-decomposition 스킬)
 
 사용:
   python3 build_spec_template.py [--config=policy_config.json]
@@ -92,12 +93,27 @@ def _merge_pgs(existing, derived, fallback):
     return out
 
 
-def apply_overrides(spec):
+def _merged_dict(static_value, cfg, key):
+    merged = dict(static_value)
+    extra = cfg.get(key) or {}
+    if not isinstance(extra, dict):
+        raise SystemExit(f"config.{key} must be an object")
+    merged.update(extra)
+    return merged
+
+
+def apply_overrides(spec, cfg=None):
     """PI 본문 필드 세팅 + applies_to 로 FD.subfn_pis/subfn_ui 재구성 + PI.applies_to_functions.
 
     세부기능↔PI 매핑의 진실원천 = 이 override의 applies_to. 따라서 subfn_pis를 전부 재구성한다(멱등).
     """
+    cfg = cfg or {}
+    pi_content_overrides = _merged_dict(PI_CONTENT_OVERRIDES, cfg, "pi_content_overrides")
+    ui_subfns = set(UI_SUBFNS) | set(cfg.get("ui_subfns") or [])
+    fn_desc_overrides = _merged_dict(FN_DESC_OVERRIDES, cfg, "fn_desc_overrides")
+
     pi_by = {pi["id"]: pi for pi in spec.get("policy_details", [])}
+    fn_by = {fn["id"]: fn for fn in spec.get("functions", [])}
     fd_by = {fd.get("function_id"): fd for fd in spec.get("function_details", [])}
 
     # 1) 모든 FD의 subfn_pis/subfn_ui 를 sub_functions 길이에 맞춰 초기화
@@ -107,7 +123,7 @@ def apply_overrides(spec):
         fd["subfn_ui"] = [False] * n
 
     # 2) UI 세부기능 표기
-    for ref in UI_SUBFNS:
+    for ref in ui_subfns:
         fid, i = parse_ref(ref)
         fd = fd_by.get(fid)
         if fd and i and 1 <= i <= len(fd["subfn_ui"]):
@@ -115,7 +131,7 @@ def apply_overrides(spec):
 
     # 3) PI override 적용
     unknown = []
-    for pid, ov in PI_CONTENT_OVERRIDES.items():
+    for pid, ov in pi_content_overrides.items():
         pi = pi_by.get(pid)
         if not pi:
             unknown.append(pid)
@@ -147,7 +163,25 @@ def apply_overrides(spec):
         pi["applies_to_functions"] = sorted(fns)
     if unknown:
         raise SystemExit(f"PI_CONTENT_OVERRIDES unknown PI id: {unknown}")
-    print(f"  [overrides] PI {len(PI_CONTENT_OVERRIDES)} 적용, UI 세부기능 {len(UI_SUBFNS)}")
+
+    # 4) FN description override 적용(선택)
+    unknown_fn = []
+    for fid, lines in fn_desc_overrides.items():
+        fn = fn_by.get(fid)
+        if not fn:
+            unknown_fn.append(fid)
+            continue
+        if not isinstance(lines, list):
+            raise SystemExit(f"FN_DESC_OVERRIDES[{fid}] must be a list")
+        fd = fd_by.get(fid, {})
+        sub_count = len(fd.get("sub_functions") or [])
+        if sub_count and len(lines) != sub_count:
+            raise SystemExit(f"FN_DESC_OVERRIDES[{fid}] length {len(lines)} != sub_functions {sub_count}")
+        fn["description"] = " ".join(f"({i + 1}) {line}" for i, line in enumerate(lines))
+    if unknown_fn:
+        raise SystemExit(f"FN_DESC_OVERRIDES unknown FN id: {unknown_fn}")
+
+    print(f"  [overrides] PI {len(pi_content_overrides)} 적용, UI 세부기능 {len(ui_subfns)}, FN 설명 {len(fn_desc_overrides)}")
     return spec
 
 
@@ -296,7 +330,7 @@ def main(argv):
         return 2
 
     spec = json.load(open(baseline, encoding="utf-8"))
-    apply_overrides(spec)
+    apply_overrides(spec, cfg)
     rebuild_rollups(spec, cfg)
     apply_term_replacements(spec, cfg)
 

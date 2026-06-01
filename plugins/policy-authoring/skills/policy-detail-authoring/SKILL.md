@@ -1,12 +1,11 @@
 ---
 name: policy-detail-authoring
 description: Author the "정책 상세" (Policy Items / PI) of a policy spec — readable rule + criteria + tables + customer notice + provenance, mapped N:M to sub-functions — then fact-check them against as-is sources, flag uncertain values with a red review badge, and capture to-be improvement candidates separately. Use this whenever the user is writing or upgrading policy-detail content, wants matrix/multi-axis values rendered as tables, needs a "현업 검토 필요" flag for values that are system-migration-dependent or to-be-undefined, or wants to archive to-be revision candidates WITHOUT editing the policy body. Trigger on "정책 상세 작성", "PI 재작성", "표로 정리", "팩트체크", "현업 검토 필요", "field_review", "to-be 후보", "근거 표기". Prefer this skill when the work is about the content of individual policy items rather than the hierarchy shape or naming.
-version: 0.1.0
 ---
 
 # 정책 상세 작성·팩트체크·to-be (Policy Detail Authoring, Fact-Check & To-Be)
 
-> **claude.ai에서**: 작성·점검할 PI와 as-is 근거를 대화에 붙여넣거나 업로드하고 적용을 요청하면 가이드대로 동작한다. 표 미리보기가 필요하면 Code Execution을 켜고 스펙 JSON을 올려 렌더 스크립트를 돌린다. 5개 스킬을 함께 업로드 권장.
+> **Claude/Codex에서**: 작성·점검할 PI와 as-is 근거를 대화에 붙여넣거나 업로드하고 적용을 요청하면 가이드대로 동작한다. 표 미리보기가 필요하면 스펙 JSON을 준비해 동봉 렌더 스크립트를 실행한다. `policy-*` 5개 스킬을 함께 설치하는 것을 권장한다.
 
 정책 그룹(PG)의 각 정책 상세(PI)를 **기획자가 바로 이해하는 가독형**으로 쓰고, 세부기능에 N:M 매핑하고, as-is 사실과 대조해 **불확실한 값은 붉은 배지로 표면화**하고, to-be 개선안은 **본문을 건드리지 않고 따로 모은다**.
 

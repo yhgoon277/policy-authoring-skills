@@ -1,0 +1,20 @@
+{
+  "name": "policy-authoring-skills",
+  "interface": {
+    "displayName": "Policy Authoring Skills"
+  },
+  "plugins": [
+    {
+      "name": "policy-authoring",
+      "source": {
+        "source": "local",
+        "path": "./plugins/policy-authoring"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

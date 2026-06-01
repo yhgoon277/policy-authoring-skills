@@ -1,12 +1,11 @@
 ---
 name: policy-naming-readability
 description: Make policy-spec names and descriptions instantly understandable to non-technical planners. Use this whenever the user wants to clean up names or descriptions in a policy/requirements document — expanding cryptic item names, simplifying sub-function names, rendering "명칭 (ID)", or rewriting process/group/function descriptions in plain language by removing internal codes, jargon, acronyms, translationese, and stiff template phrasing. Trigger on "명칭 정리", "이름 이해하기 쉽게", "설명 풀어쓰기", "가독성 개선", "plain language", "rename sub-functions", "용어 풀이", or when a planner says the spec is hard to read. Prefer this skill when the task is about how things are worded or labeled, as opposed to the structure of the function layer or the substance of policy details.
-version: 0.1.0
 ---
 
 # 명칭·설명 가독성 (Policy Naming & Plain-Language Readability)
 
-> **claude.ai에서**: 다듬을 이름/세부기능 목록·설명을 대화에 붙여넣거나 업로드하고 적용을 요청하면 가이드대로 동작한다. 효과를 온전히 보려면 5개 스킬을 함께 업로드한다.
+> **Claude/Codex에서**: 다듬을 이름/세부기능 목록·설명을 대화에 붙여넣거나 업로드하고 적용을 요청하면 가이드대로 동작한다. 효과를 온전히 보려면 `policy-*` 5개 스킬을 함께 설치한다.
 
 정책 명세의 **이름과 설명**을, 비전문가 기획자가 사전 지식 없이 바로 이해하도록 다듬는 방법.
 
