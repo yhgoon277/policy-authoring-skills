@@ -1,0 +1,54 @@
+{
+  "_comment": "참조 구현(통신 '청구및수납관리', BIL)의 실제 config 예시. 새 모듈은 policy_config.template.json 에서 시작하세요.",
+  "business_code": "BIL",
+  "module_title": "청구및수납관리",
+
+  "baseline_spec_path": "samples/NC_청구및수납관리_정책서_간소화_v1.0_spec.json",
+  "spec_path": "samples/NC_청구및수납관리_정책서_간소화_v1.1_spec.json",
+  "preview_out": "samples/NC_청구및수납관리_정책서_간소화_preview.html",
+
+  "term_replacements": {
+    "T world": "Next Channel",
+    "SWING": "BSS"
+  },
+  "term_skip_keys": ["source_note", "source_refs", "source_basis", "global_standard_ref", "v1.0_match", "field_review"],
+
+  "expected_counts": {
+    "usecases": 12, "processes": 39, "process_details": 39,
+    "functions": 124, "function_details": 124,
+    "policy_groups": 19, "policies": 19, "policy_details": 210
+  },
+
+  "known_pr_only": [
+    ["PR-BIL-CHRG-004", "PI-BIL-AUTO-01-12"],
+    ["PR-BIL-ARRS-003", "PI-BIL-HIST-01-16"],
+    ["PR-BIL-ARRS-003", "PI-BIL-PAYM-01-16"],
+    ["PR-BIL-PAYM-002", "PI-BIL-HIST-01-03"],
+    ["PR-BIL-AUTO-002", "PI-BIL-AUTO-01-11"],
+    ["PR-BIL-AUTO-004", "PI-BIL-CHRG-01-16"],
+    ["PR-BIL-FAM-001", "PI-BIL-CHRG-01-08"],
+    ["PR-BIL-FAM-002", "PI-BIL-FAM-01-01"],
+    ["PR-BIL-FAM-002", "PI-BIL-FAM-01-03"],
+    ["PR-BIL-PT-002", "PI-BIL-PT-01-04"],
+    ["PR-BIL-PT-004", "PI-BIL-PT-01-05"],
+    ["PR-BIL-OPS-003", "PI-BIL-ARRS-01-09"]
+  ],
+  "pr_pi_remove": [
+    ["PR-BIL-CHRG-002", "PI-BIL-OPS-01-03"]
+  ],
+  "manual_pg_fallback": {
+    "PR-BIL-CHRG-005": ["PG-BIL-CHRG-01", "PG-BIL-PAYM-01"],
+    "PR-BIL-PT-004": ["PG-BIL-PT-01", "PG-BIL-PAYM-01"],
+    "PR-BIL-OPS-001": ["PG-BIL-OPS-01", "PG-BIL-ALERT-01"],
+    "PR-BIL-OPS-002": ["PG-BIL-OPS-01", "PG-BIL-CHRG-01"],
+    "PR-BIL-OPS-003": ["PG-BIL-OPS-01", "PG-BIL-ARRS-01"],
+    "PR-BIL-PAYM-002": ["PG-BIL-SEC-01"],
+    "PR-BIL-ARRS-002": ["PG-BIL-SEC-01"],
+    "PR-BIL-MC-004": ["PG-BIL-SEC-01"],
+    "PR-BIL-SPLT-002": ["PG-BIL-SEC-01"],
+    "PR-BIL-AUTO-001": ["PG-BIL-SEC-01"],
+    "PR-BIL-AUTO-003": ["PG-BIL-SEC-01"]
+  },
+
+  "naming_banned_tokens": ["×", "↔", "→", "매트릭스", "CTA", "cross-distinction", "sub-", "T0~T9"]
+}

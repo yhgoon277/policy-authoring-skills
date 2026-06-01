@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "mypart-skills",
+  "description": "정책서·요구사항 명세 작성 방법론을 캡처한 팀 스킬 마켓플레이스. 계층/기능 분화, 명칭·설명 가독성, '정책 상세' 작성·팩트체크·to-be, ID 정합성 감사를 재사용 가능한 스킬로 제공한다.",
+  "owner": {
+    "name": "MyPart Policy Team"
+  },
+  "plugins": [
+    {
+      "name": "policy-authoring",
+      "description": "통신 정책서 수준의 명세를 만드는 5종 스킬 묶음 — 계층·기능 분화, 명칭·설명 가독성, 정책 상세(포맷·팩트체크·to-be), ID 정합성 감사, 그리고 새 모듈을 위한 온보딩/설치. 다른 프로젝트 폴더·소스 형식에도 표준 spec 스키마를 인터페이스로 이식 가능.",
+      "author": {
+        "name": "MyPart Policy Team"
+      },
+      "category": "productivity",
+      "source": "./plugins/policy-authoring"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "policy-authoring",
+  "description": "통신 정책서 수준의 명세(UC→PR→FN→세부기능, PG→PI)를 일관된 품질로 작성·검증하는 방법론 스킬 묶음. 계층·기능 분화 / 명칭·설명 가독성 / 정책 상세(표·콜아웃·근거 + 가나다 팩트체크 + to-be) / ID 정합성 감사 / 새 모듈 온보딩·설치 5종을 포함한다.",
+  "version": "0.1.0",
+  "author": {
+    "name": "MyPart Policy Team"
+  },
+  "keywords": ["policy", "spec", "requirements", "정책서", "기능명세", "정합성"]
+}

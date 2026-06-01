@@ -1,0 +1,19 @@
+{
+  "business_code": "BIZ",
+  "module_title": "<모듈 이름>",
+
+  "baseline_spec_path": "samples/<module>_v1.0_spec.json",
+  "spec_path": "samples/<module>_v1.1_spec.json",
+  "preview_out": "samples/<module>_preview.html",
+
+  "term_replacements": {},
+  "term_skip_keys": ["source_note", "source_refs", "source_basis", "global_standard_ref", "v1.0_match", "field_review"],
+
+  "expected_counts": {},
+
+  "known_pr_only": [],
+  "pr_pi_remove": [],
+  "manual_pg_fallback": {},
+
+  "naming_banned_tokens": ["×", "↔", "→", "매트릭스", "CTA", "cross-distinction", "sub-", "T0~T9"]
+}
