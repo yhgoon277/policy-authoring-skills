@@ -41,6 +41,10 @@ codex plugin add policy-authoring@policy-authoring-skills
 codex plugin list
 ```
 
+설치 후 새 대화에서 slash command도 사용할 수 있습니다:
+`/policy-setup`, `/policy-audit`, `/policy-detail`, `/policy-naming`, `/policy-hierarchy`
+(또는 네임스페이스 형식 `/policy-authoring:policy-setup` 등).
+
 ### Codex 직접 설치 (`.agents/skills`)
 ```bash
 mkdir -p ~/.agents/skills

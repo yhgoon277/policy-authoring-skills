@@ -1,6 +1,6 @@
 {
   "name": "policy-authoring",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reusable policy and requirements authoring skills for building, editing, auditing, and rendering UC/PR/FN/sub-function and PG/PI policy specs.",
   "author": {
     "name": "MyPart Policy Team",

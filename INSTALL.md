@@ -69,7 +69,7 @@ cp -R plugins/policy-authoring/skills/* ~/.agents/skills/
 ### 1-1. 설치 확인
 - **claude.ai**: Skills 목록에 `policy-*` 5개가 보이면 OK.
 - **Claude Code**: `claude plugin list` → `policy-authoring@mypart-skills : enabled`. 새 세션에서 5개 스킬(`policy-*`)이 사용 가능 목록에 노출.
-- **Codex app/CLI**: `codex plugin list`에 `policy-authoring@policy-authoring-skills`가 installed/enabled로 보이고, 새 대화의 스킬 목록에 `policy-*` 5개가 노출되면 OK. 직접 설치라면 `~/.agents/skills` 또는 repo `.agents/skills` 아래 5개 폴더가 있으면 됩니다.
+- **Codex app/CLI**: `codex plugin list`에 `policy-authoring@policy-authoring-skills`가 installed/enabled로 보이고, 새 대화의 스킬 목록에 `policy-*` 5개가 노출되면 OK. 플러그인 설치라면 `/policy-setup`, `/policy-audit`, `/policy-detail`, `/policy-naming`, `/policy-hierarchy` slash command도 자동완성됩니다. 직접 설치라면 `~/.agents/skills` 또는 repo `.agents/skills` 아래 5개 폴더가 있으면 됩니다.
 
 ---
 
@@ -150,6 +150,12 @@ claude plugin marketplace remove mypart-skills
 Codex CLI 설치를 쓴 경우:
 ```bash
 codex plugin marketplace upgrade policy-authoring-skills
+codex plugin remove policy-authoring@policy-authoring-skills
+codex plugin add policy-authoring@policy-authoring-skills
+```
+
+제거만 할 때:
+```bash
 codex plugin remove policy-authoring@policy-authoring-skills
 codex plugin marketplace remove policy-authoring-skills
 ```

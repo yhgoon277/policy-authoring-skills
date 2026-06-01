@@ -31,6 +31,13 @@ Then start a new Codex conversation and check that all five policy-* skills
 are visible. The Python tools use only the standard library and read project
 settings from policy_config.json.
 
+Slash commands
+--------------
+Slash commands such as /policy-setup and /policy-audit are provided by the
+Codex plugin package. They are available when installing the plugin through the
+Codex marketplace flow. Direct skill-folder installs expose the skills, but not
+the plugin slash commands.
+
 Claude artifacts
 ----------------
 Existing .claude-plugin files and the other dist/*.zip files are kept for
