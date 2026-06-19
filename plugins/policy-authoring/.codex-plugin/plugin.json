@@ -1,7 +1,7 @@
 {
   "name": "policy-authoring",
-  "version": "0.1.1",
-  "description": "Reusable policy and requirements authoring skills for building, editing, auditing, and rendering UC/PR/FN/sub-function and PG/PI policy specs.",
+  "version": "0.2.0",
+  "description": "Reusable policy and requirements authoring skills for building, editing, auditing, rendering, and delivering UC/PR/FN/sub-function and PG/PI policy specs — now 8 skills including preview render/deliver splice, NC-studio upload gates (requirement links, decision-spec axes), and requirement-coverage workflow orchestration.",
   "author": {
     "name": "MyPart Policy Team",
     "url": "https://github.com/yhgoon277"
@@ -19,8 +19,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Policy Authoring",
-    "shortDescription": "정책서 작성·검증 방법론 스킬 세트",
-    "longDescription": "Five reusable skills for policy and requirements authoring: hierarchy decomposition, naming readability, policy-detail authoring, integrity audit, and new-module setup. The bundled Python tools use a canonical spec JSON and policy_config.json so the workflow can move across project folders and source formats.",
+    "shortDescription": "정책서 작성·검증·배포 방법론 스킬 세트",
+    "longDescription": "Eight reusable skills for policy and requirements authoring: hierarchy decomposition, naming readability, policy-detail authoring, integrity audit (groups A–L), new-module setup, preview render & delivery splice, NC-studio upload gates (G2 requirement links, G5 decision-spec axes), and requirement-coverage workflow orchestration. The bundled Python tools use a canonical spec JSON and a multi-unit policy_config.json so the workflow can move across project folders and source formats.",
     "developerName": "MyPart Policy Team",
     "category": "Productivity",
     "capabilities": [

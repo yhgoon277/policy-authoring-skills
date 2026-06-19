@@ -2,10 +2,11 @@
 """계층 ID 연결관계 정합성 전수 감사 (read-only, 결정론) — 이식 가능 config 구동판.
 
 UC→PR→FN→세부기능, PR→PG→PI, FN↔PI 간 ID 매핑이 누락·불일치 없이
-정합한지 모든 불변식(A~I)을 결정론적으로 검사하고 분류된 리포트를 낸다.
+정합한지 모든 불변식(A~K)을 결정론적으로 검사하고 분류된 리포트를 낸다.
 
 이 파일은 어떤 정책 모듈에도 그대로 쓰도록 일반화돼 있다. 프로젝트별로 달라지는 값
-(business_code · expected_counts · known_pr_only · 금지토큰)은 모두 policy_config.json 에서 읽는다.
+(business_code · expected_counts · known_pr_only · 금지토큰 · min_fn_per_pr ·
+nc_required_fields)은 모두 policy_config.json 에서 읽는다.
 
 사용:
   python3 audit_id_integrity.py [spec.json] [--config=policy_config.json] [--json] [--only=STRUCTURAL|SEMANTIC]
@@ -27,8 +28,12 @@ import sys
 # ───────────────────────── config 로드 ─────────────────────────
 DEFAULT_CONFIG = "policy_config.json"
 
-# config.naming_banned_tokens 미설정 시 기본값(정책상세명 표현 표준; 그룹 I2)
+# config.naming_banned_tokens 미설정 시 기본값(표현 표준; 그룹 I2 정책상세명·I3 본문)
 DEFAULT_BANNED_TOKENS = ["×", "↔", "→", "매트릭스", "CTA", "cross-distinction", "sub-", "T0~T9"]
+
+# config.term_skip_keys 미설정 시 기본값(provenance·근거 필드 — I3 본문 스캔에서 제외)
+DEFAULT_TERM_SKIP_KEYS = ["source_note", "source_refs", "source_basis",
+                          "global_standard_ref", "v1.0_match", "field_review"]
 
 # 검사 함수들이 참조하는 전역(config 적용 후 채워짐)
 BUSINESS_CODE = "BIL"
@@ -37,6 +42,7 @@ PREFIX_BY_KEY: dict = {}
 ID_RE: dict = {}
 KNOWN_PR_ONLY: set = set()
 BANNED_TOKENS: list = list(DEFAULT_BANNED_TOKENS)
+TERM_SKIP_KEYS: set = set(DEFAULT_TERM_SKIP_KEYS)
 
 
 def load_config(path):
@@ -46,9 +52,23 @@ def load_config(path):
     return {}
 
 
+def overlay_unit(cfg, unit):
+    """config.units[unit] 블록을 top-level 키로 끌어올린다(있으면)."""
+    units = cfg.get("units") or {}
+    if not unit:
+        return cfg
+    if unit not in units:
+        raise SystemExit(f"--unit={unit} 가 units 에 없습니다. 가능: {sorted(units)}")
+    merged = dict(cfg)
+    merged.update(units[unit])
+    return merged
+
+
 def apply_config(cfg):
-    """config dict → 전역 규약(PREFIX_BY_KEY·ID_RE·EXPECTED_COUNTS·KNOWN_PR_ONLY·BANNED_TOKENS)."""
+    """config dict → 전역 규약(PREFIX_BY_KEY·ID_RE·EXPECTED_COUNTS·KNOWN_PR_ONLY·BANNED_TOKENS
+    ·TERM_SKIP_KEYS·MIN_FN_PER_PR·NC_REQUIRED_FIELDS)."""
     global BUSINESS_CODE, EXPECTED_COUNTS, PREFIX_BY_KEY, ID_RE, KNOWN_PR_ONLY, BANNED_TOKENS
+    global TERM_SKIP_KEYS, MIN_FN_PER_PR, NC_REQUIRED_FIELDS
     BUSINESS_CODE = cfg.get("business_code", "BIL")
     biz = re.escape(BUSINESS_CODE)
     PREFIX_BY_KEY = {
@@ -66,6 +86,9 @@ def apply_config(cfg):
     EXPECTED_COUNTS = dict(cfg.get("expected_counts") or {})  # 비면 H3 카운트 검사 생략(실측만 보고)
     KNOWN_PR_ONLY = {tuple(pair) for pair in (cfg.get("known_pr_only") or [])}
     BANNED_TOKENS = list(cfg.get("naming_banned_tokens") or DEFAULT_BANNED_TOKENS)
+    TERM_SKIP_KEYS = set(cfg.get("term_skip_keys") or DEFAULT_TERM_SKIP_KEYS)
+    MIN_FN_PER_PR = int(cfg.get("min_fn_per_pr") or 2)
+    NC_REQUIRED_FIELDS = dict(cfg.get("nc_required_fields") or {})  # 비면 그룹 K 생략
 
 
 class Violation:
@@ -371,19 +394,26 @@ def check_G(s, idx):
     stale_pr = [k for k in p2f if k not in idx["PR"]]
     if stale_pr:
         V.append(Violation("G2", "STRUCTURAL", f"process_to_function 키 {len(stale_pr)}개가 현 PR id와 불일치(stale): {stale_pr[:3]}"))
-    # G3 function_to_policy_detail 존재·일치
+    # G3 function_to_policy_detail 일치 (전부 미매핑이면 빈 맵=정상; stale/불일치/누락만 STRUCTURAL)
     f2p = tm.get("function_to_policy_detail") or {}
-    if not f2p:
-        V.append(Violation("G3", "STRUCTURAL", "function_to_policy_detail 비어있음(미생성)"))
-    else:
-        fn_pi = {f["id"]: set(f.get("related_policy_details") or []) for f in s.get("functions", [])}
-        for fn, pis in f2p.items():
-            if set(pis) != fn_pi.get(fn, set()):
-                V.append(Violation("G3", "STRUCTURAL", f"f2p[{fn}] != FN.related_policy_details"))
-    # G4 policy_detail_to_function
+    fn_pi = {f["id"]: set(f.get("related_policy_details") or []) for f in s.get("functions", [])}
+    expected_f2p = {fn for fn, pis in fn_pi.items() if pis}
+    for fn, pis in f2p.items():
+        if set(pis) != fn_pi.get(fn, set()):
+            V.append(Violation("G3", "STRUCTURAL", f"f2p[{fn}] != FN.related_policy_details"))
+    missing_f2p = sorted(expected_f2p - set(f2p))
+    if missing_f2p:
+        V.append(Violation("G3", "STRUCTURAL", f"function_to_policy_detail 누락/stale {len(missing_f2p)}: {missing_f2p[:3]}"))
+    # G4 policy_detail_to_function (전부 배경 PI면 빈 맵=정상)
     p2fn = tm.get("policy_detail_to_function") or {}
-    if not p2fn:
-        V.append(Violation("G4", "STRUCTURAL", "policy_detail_to_function 비어있음(미생성)"))
+    pi_fn = {pi["id"]: set(pi.get("applies_to_functions") or []) for pi in s.get("policy_details", [])}
+    expected_p2fn = {pi for pi, fns in pi_fn.items() if fns}
+    for pi, fns in p2fn.items():
+        if set(fns) != pi_fn.get(pi, set()):
+            V.append(Violation("G4", "STRUCTURAL", f"p2fn[{pi}] != PI.applies_to_functions"))
+    missing_p2fn = sorted(expected_p2fn - set(p2fn))
+    if missing_p2fn:
+        V.append(Violation("G4", "STRUCTURAL", f"policy_detail_to_function 누락/stale {len(missing_p2fn)}: {missing_p2fn[:3]}"))
     return V
 
 
@@ -428,6 +458,9 @@ def check_I(s, idx):
     """SEMANTIC. exit 1 유발 안 함. 기호·외국어·괄호 잔존 가시화.
     I1: 세부기능명(sub_functions)에 괄호 없음.
     I2: 정책상세명(PI name, 끝단 (ID) 제외 base)에 금지 토큰 없음.
+    I3: PI 본문(rule_statement·criteria_values·customer_notice·detail_tables 셀/note)에 금지 토큰 없음.
+        근거 필드(config.term_skip_keys: source_note·field_review 등)는 → 등 허용이므로 스캔 제외,
+        파생 미러(content·decision_spec)도 작성자 원본이 아니므로 제외(이중보고 방지).
     금지 토큰은 config.naming_banned_tokens (기본값 DEFAULT_BANNED_TOKENS)."""
     V = []
     for fd in s.get("function_details", []):
@@ -435,13 +468,136 @@ def check_I(s, idx):
             if "(" in sub or "（" in sub:
                 V.append(Violation("I1", "SEMANTIC",
                     f"{fd.get('function_id')}.sub_functions 괄호 잔존: {sub!r}"))
+
+    # I3 본문 스캔 대상 = 작성자가 직접 쓰는 본문 필드만. term_skip_keys 에 든 근거 필드는 제외.
+    body_str_fields = [f for f in ("rule_statement", "customer_notice") if f not in TERM_SKIP_KEYS]
+    scan_criteria = "criteria_values" not in TERM_SKIP_KEYS
+    scan_tables = "detail_tables" not in TERM_SKIP_KEYS
+
+    def flag_I3(pid, field, text):
+        if not isinstance(text, str):
+            return
+        for b in BANNED_TOKENS:
+            if b in text:
+                V.append(Violation("I3", "SEMANTIC",
+                    f"{pid}.{field} 본문 금지 토큰 '{b}': {text[:50]!r}"))
+
     for pi in s.get("policy_details", []):
+        pid = pi["id"]
         base = re.sub(r"\s*\([^)]*\)\s*$", "", pi.get("name", ""))  # 끝단 (ID) 제거
         for b in BANNED_TOKENS:
             if b in base:
-                V.append(Violation("I2", "SEMANTIC", f"{pi['id']}.name 표현 잔존 '{b}': {base!r}"))
+                V.append(Violation("I2", "SEMANTIC", f"{pid}.name 표현 잔존 '{b}': {base!r}"))
         if re.search(r"\blink\b", base):
-            V.append(Violation("I2", "SEMANTIC", f"{pi['id']}.name 'link' 잔존: {base!r}"))
+            V.append(Violation("I2", "SEMANTIC", f"{pid}.name 'link' 잔존: {base!r}"))
+        # I3: 본문 필드 금지 토큰 스캔
+        for f in body_str_fields:
+            flag_I3(pid, f, pi.get(f))
+        if scan_criteria:
+            for c in (pi.get("criteria_values") or []):
+                flag_I3(pid, "criteria_values", c)
+        if scan_tables:
+            for t in (pi.get("detail_tables") or []):
+                flag_I3(pid, "detail_tables.caption", t.get("caption"))
+                flag_I3(pid, "detail_tables.note", t.get("note"))
+                for h in (t.get("headers") or []):
+                    flag_I3(pid, "detail_tables.headers", h)
+                for row in (t.get("rows") or []):
+                    for cell in row:
+                        flag_I3(pid, "detail_tables.cell", cell)
+    return V
+
+
+# ───────────────────────── 그룹 J: 계위 건전성 (PR↔FN) ─────────────────────────
+def check_J(s, idx):
+    """SEMANTIC. 재-레벨링 회귀 가드 — exit 1 유발 안 함, 사인오프 전 0 목표.
+    J1: PR당 FN 수 < config.min_fn_per_pr (기본 2) — PR↔FN 1:1 계위 결함 재발 감지.
+    J2: PR명 == 소속 FN명 — 화면/위젯 레벨 미분화 신호."""
+    V = []
+    fn_names = {f["id"]: (f.get("name") or "").strip() for f in s.get("functions", [])}
+    for pr in s.get("processes", []):
+        fns = pr.get("related_functions") or []
+        if len(fns) < MIN_FN_PER_PR:
+            V.append(Violation("J1", "SEMANTIC",
+                f"{pr['id']} FN {len(fns)}개 < min_fn_per_pr({MIN_FN_PER_PR})"))
+        pname = (pr.get("name") or "").strip()
+        for fid in fns:
+            if pname and fn_names.get(fid) == pname:
+                V.append(Violation("J2", "SEMANTIC", f"{pr['id']}명 == {fid}명: {pname!r}"))
+    return V
+
+
+# ───────────────────────── 그룹 K: NC 필수필드(스키마 완성도) ─────────────────────────
+def check_K(s, idx):
+    """STRUCTURAL — enrich_spec.py가 빌드에서 결정론으로 채우므로 0이어야 정상.
+    config.nc_required_fields = {컬렉션: [필드,...]} 구동. 비면 전체 생략.
+    K1 processes 필드(usecase_id 등) · K2 functions 필드(details 등)
+    K3 process_details 필드(키 존재 검사 — 빈 리스트 허용) · K4 policy_details 필드(decision_spec·rule_type 등).
+    decision_spec은 스켈레톤 존재만 STRUCTURAL(내용 품질은 별도 검토 대상)."""
+    V = []
+    req = NC_REQUIRED_FIELDS
+    for fld in req.get("processes", []):
+        for p in s.get("processes", []):
+            if not p.get(fld):
+                V.append(Violation("K1", "STRUCTURAL", f"{p['id']}.{fld} 없음/빈값"))
+    for fld in req.get("functions", []):
+        for f in s.get("functions", []):
+            if not f.get(fld):
+                V.append(Violation("K2", "STRUCTURAL", f"{f['id']}.{fld} 없음/빈값"))
+    for fld in req.get("process_details", []):
+        for d in s.get("process_details", []):
+            if fld not in d:  # case_branches 등은 빈 리스트 허용(키 존재만)
+                V.append(Violation("K3", "STRUCTURAL", f"{d.get('process_id')}.{fld} 키 없음"))
+    for fld in req.get("policy_details", []):
+        for p in s.get("policy_details", []):
+            if not p.get(fld):
+                V.append(Violation("K4", "STRUCTURAL", f"{p['id']}.{fld} 없음/빈값"))
+    return V
+
+
+# ───────────────────────── 그룹 L: 요구사항↔노드 연결 정합성 ─────────────────────────
+def check_L(s, idx):
+    """요구사항↔노드 연결(emit_requirement_links 산출) 정합성. 기능 비활성 시 [] (가산-안전).
+    L1 STRUCTURAL: meta.topic_learning.requirement_links[].nodes 전부 라이브 노드 실존(dangling 0).
+    L2 STRUCTURAL: NC requirement_id 유일 · requirements_count == len(links).
+    L4 STRUCTURAL: 양방향 일치 — link.nodes ⇄ node.source_requirement_ids."""
+    V = []
+    tl = (s.get("meta") or {}).get("topic_learning") or {}
+    links = tl.get("requirement_links")
+    nodes_emitted = any(o.get("source_requirement_ids")
+                        for c in ("usecases", "processes", "functions", "policy_groups", "policy_details")
+                        for o in s.get(c, []))
+    if not links and not nodes_emitted:
+        return V  # 기능 비활성 — baseline STRUCTURAL 0 유지
+    links = links or []
+    allids = idx["UC"] | idx["PR"] | idx["FN"] | idx["PG"] | idx["PI"]
+
+    seen = set()
+    for l in links:
+        rid = l.get("requirement_id")
+        if rid in seen:
+            V.append(Violation("L2", "STRUCTURAL", f"requirement_links 중복 id {rid}"))
+        seen.add(rid)
+    rc = tl.get("requirements_count")
+    if rc is not None and rc != len(links):
+        V.append(Violation("L2", "STRUCTURAL", f"requirements_count {rc} != links {len(links)}"))
+
+    fwd = {}  # node_id -> set(requirement_id) (link.nodes 기준)
+    for l in links:
+        rid = l.get("requirement_id")
+        for n in (l.get("nodes") or []):
+            if n not in allids:
+                V.append(Violation("L1", "STRUCTURAL", f"{rid}.nodes -> 없는 노드 {n}"))
+            else:
+                fwd.setdefault(n, set()).add(rid)
+
+    for c in ("usecases", "processes", "functions", "policy_groups", "policy_details"):
+        for o in s.get(c, []):
+            sids = set(o.get("source_requirement_ids") or [])
+            exp = fwd.get(o["id"], set())
+            if sids != exp:
+                V.append(Violation("L4", "STRUCTURAL",
+                    f"{o['id']} 양방향 불일치 — 링크기준 {sorted(exp)} vs 노드 {sorted(sids)}"))
     return V
 
 
@@ -455,6 +611,9 @@ CHECKS = [
     ("G trace_matrix↔컬렉션", check_G),
     ("H 형식·유일성·카운트", check_H),
     ("I 표현 표준(가독성)", check_I),
+    ("J 계위 건전성(PR-FN)", check_J),
+    ("K NC 필수필드", check_K),
+    ("L 요구사항↔노드 연결", check_L),
 ]
 
 
@@ -469,10 +628,13 @@ def main(argv):
     args = [a for a in argv[1:] if not a.startswith("--")]
     opts = [a for a in argv[1:] if a.startswith("--")]
     config_path = DEFAULT_CONFIG
+    unit = None
     for o in opts:
         if o.startswith("--config="):
             config_path = o.split("=", 1)[1].strip()
-    cfg = load_config(config_path)
+        elif o.startswith("--unit="):
+            unit = o.split("=", 1)[1].strip()
+    cfg = overlay_unit(load_config(config_path), unit)
     apply_config(cfg)
 
     spec_path = args[0] if args else cfg.get("spec_path")

@@ -75,3 +75,31 @@ states · state_transitions · concept_model · trace_matrix
 - **이미 구조화된 데이터(스프레드시트/JSON/DB)**: 컬럼→위 필드로 매핑하는 1회용 변환 스크립트 작성.
 - **as-is 문서(HTML/MD)만 있음**: 계층을 먼저 추출(UC/PR/FN/PG) → 골격 spec 생성 → 정책 상세는 작성 스킬로 채움.
 - **business_code/도메인 코드**만 정하면 ID 패턴은 자동으로 따라온다.
+
+---
+
+## NC스튜디오 풀스키마 필드 (`enrich_spec.py`가 채움)
+NC스튜디오에 업로드해 검증하려면 baseline의 핵심 필드 외에 NC 풀스키마 필드가 필요하다. build 말미(`bake` 직후) `enrich()`가 이 필드들을 기계 시드하므로 baseline에는 비워둬도 된다. config `nc_required_fields`가 audit 그룹 **K**(STRUCTURAL)로 존재를 강제한다.
+
+### policy_details[] (NC 필드)
+- **`decision_spec`** — 닫힌 판정(실제 값·조건·횟수·시간·상태). NC **G5**(정책 구체성)가 검사. `enrich._route_axes(criteria, rule)`가 criteria/rule 원문을 키워드로 판정축(`criteria_values`·`restriction_rule`·`priority`·`exception_allow`·`exception_deny`·`history_logging`·`allow_rule`)에 라우팅(원문 substring 재사용, 날조 0). 빈 축은 키 omit(NC가 수용 확인).
+- **`rule_type`** — 판정 유형 분류(override에서 지정 가능).
+- **`mockup_binding`**(/`mockup_*`) — 화면 바인딩.
+- **`review_status`** — 검토 상태.
+- (이미 위에서 다룬) `source_basis`도 NC 근거 필드.
+
+### processes[] / functions[] (NC 필드)
+- process: `usecase_id`(단수, K필수)·`case_branches`(케이스 분기).
+- function: `details`(K필수, element 단위 세부 — `enrich`가 64/64 채움).
+
+## requirement_links (NC G2 — 요구사항↔노드 연결)
+NC **G2**는 우리 노드가 요구사항에 연결돼 있을 것을 요구한다. 우리 업로드 spec에는 요구 데이터가 없으므로(`convert_autodraft`가 제거), `enrich_spec.py:emit_requirement_links`가 build의 `enrich` 직후 호출돼 `meta.topic_learning.requirement_links[]`·`requirement_implications`·노드 `source_requirement_ids`/`refs`를 생성한다. 설정이 없으면 no-op.
+
+config `units.<unit>.requirement_links` 블록:
+- `emit.meta`·`emit.nodes` — meta·노드에 각각 emit 할지.
+- `matrix_path` — tracked 커버리지 매트릭스(`coverage_gate.parse_matrix`로 REQ→노드 파싱, 라이브 필터=dangling 0).
+- `nc_coverage_path` — NC식 요구 ID(예 `CS-H01-003`) jsonl. 요구명 정규화로 매트릭스와 브리지.
+- `requirements_index_path` — 요구 인덱스 jsonl.
+- `nc_only_dispositions{}` — 자동 매칭 안 되는 NC식 요구 ID의 수동 처분(`decision`·`nodes[]`·`note`). ⚠️ NC는 **빈-노드 verdict(범위밖/전략, `nodes:[]`)를 미수용** — 가능한 한 노드 ≥1 연결.
+
+audit 그룹 **L**(dangling·유일성·양방향)이 `requirement_links` 활성 시 검증, 비활성이면 no-op.

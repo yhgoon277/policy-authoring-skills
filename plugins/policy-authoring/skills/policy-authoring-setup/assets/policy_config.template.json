@@ -2,22 +2,39 @@
   "business_code": "BIZ",
   "module_title": "<모듈 이름>",
 
-  "baseline_spec_path": "samples/<module>_v1.0_spec.json",
-  "spec_path": "samples/<module>_v1.1_spec.json",
-  "preview_out": "samples/<module>_preview.html",
-
-  "pi_content_overrides": {},
-  "ui_subfns": [],
-  "fn_desc_overrides": {},
-
   "term_replacements": {},
   "term_skip_keys": ["source_note", "source_refs", "source_basis", "global_standard_ref", "v1.0_match", "field_review"],
+  "naming_banned_tokens": ["×", "↔", "→", "매트릭스", "CTA", "cross-distinction", "sub-", "T0~T9"],
 
-  "expected_counts": {},
+  "min_fn_per_pr": 2,
+  "nc_required_fields": {
+    "processes": ["usecase_id"],
+    "functions": ["details"],
+    "process_details": ["related_functions", "usecase_ids", "case_branches"],
+    "policy_details": ["decision_spec", "rule_type", "mockup_binding", "review_status"]
+  },
 
-  "known_pr_only": [],
-  "pr_pi_remove": [],
-  "manual_pg_fallback": {},
-
-  "naming_banned_tokens": ["×", "↔", "→", "매트릭스", "CTA", "cross-distinction", "sub-", "T0~T9"]
+  "units": {
+    "<UNIT>": {
+      "domain": "<DOMAIN>",
+      "title": "<유닛 표시 제목>",
+      "autodraft_spec": "samples/NC_auto/<MODULE>_<UNIT>_v0.11_spec.json",
+      "baseline_spec_path": "samples/baseline/<MODULE>_<UNIT>_v1.0_spec.json",
+      "spec_path": "samples/<MODULE>_<UNIT>_v1.1_spec.json",
+      "preview_out": "samples/preview/<MODULE>_<UNIT>_preview.html",
+      "expected_counts": {},
+      "known_pr_only": [],
+      "pr_pi_remove": [],
+      "manual_pg_fallback": {},
+      "requirement_links": {
+        "emit": {"meta": true, "nodes": true},
+        "matrix_path": "audit/<UNIT>_coverage_matrix.md",
+        "nc_coverage_path": "data/index/<UNIT>_requirement_coverage.jsonl",
+        "requirements_index_path": "data/index/requirements.jsonl",
+        "nc_only_dispositions": {
+          "<NC-ONLY-REQ-ID>": {"decision": "<반영|통합|전략|범위밖>(설명)", "nodes": ["<PI-…>"], "note": "<왜 이 노드(들)에 연결/범위밖인지 1~2문장. 빈-노드(nodes:[])는 NC 게이트가 미수용 — 가능한 한 ≥1 노드 연결>"}
+        }
+      }
+    }
+  }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""정책 spec 빌드 파이프라인 템플릿 (config 구동, 이식 가능).
+"""정책 spec 빌드 파이프라인 (config 구동, 이식 가능, 멀티 unit).
 
 파이프라인 순서 (이 순서가 핵심):
   1) baseline spec 로드
@@ -8,15 +8,15 @@
   4) apply_term_replacements ← 맨 마지막. 레거시→최종 용어(근거 필드 제외).
   5) 저장 + 카운트 출력
 
-골격(3·4·main)은 그대로 두고, 아래 PI_CONTENT_OVERRIDES / UI_SUBFNS / FN_DESC_OVERRIDES 또는
-config의 pi_content_overrides / ui_subfns / fn_desc_overrides 만 자기 모듈 값으로 채운다.
-(작성 규칙 = policy-detail-authoring 스킬 / FN 설명 = policy-hierarchy-decomposition 스킬)
+unit별 PI override는 tools/overrides/<unit>.py 에 둔다(--unit 으로 로드).
+config 는 units{<unit>:{baseline_spec_path,spec_path,...}} 구조 + 공통 top-level 키.
 
 사용:
-  python3 build_spec_template.py [--config=policy_config.json]
-  # config.baseline_spec_path 를 읽어 config.spec_path 로 저장.
+  python3 build_spec.py --config=policy_config.json --unit=<hub|faq|store>
+  # config.units[unit].baseline_spec_path 를 읽어 config.units[unit].spec_path 로 저장.
 """
 from __future__ import annotations
+import importlib
 import json
 import os
 import sys
@@ -24,32 +24,12 @@ import sys
 DEFAULT_CONFIG = "policy_config.json"
 
 # ══════════════════════════════════════════════════════════════════════
-#  여기를 채운다 — PI 내용 override (정책 상세 작성)
+#  모듈 레벨 기본값(--unit 미지정 시). 실제 PI override는 tools/overrides/<unit>.py.
 #  키 형식 = "PI-<BIZ>-<DOMAIN>-NN-NN". applies_to = ["FN-<BIZ>-<DOMAIN>-NNN#idx"] (idx 1-based)
 # ══════════════════════════════════════════════════════════════════════
-PI_CONTENT_OVERRIDES: dict = {
-    # 예시 1건(삭제·교체용):
-    # "PI-BIZ-CHRG-01-02": {
-    #     "rule": "청구요금은 이번 달을 포함해 최근 6개월까지 조회할 수 있다.",
-    #     "criteria": ["조회 가능 기간: 최근 6개월", "갱신 시점: 매월 1일"],
-    #     "notice": "",
-    #     "source_note": "as-is 요금 정책서 섹션 1.1(조회 기간)",
-    #     "applies_to": ["FN-BIZ-CHRG-001#1", "FN-BIZ-CHRG-002#2"],
-    #     "tables": [{
-    #         "caption": "회선 종류별 조회 시점",
-    #         "headers": ["회선 종류", "조회 가능 시점"],
-    #         "rows": [["이동전화", "5일경"], ["유선", "6일경"]],
-    #         "note": "정기청구 작업: 매월 1~3일",
-    #     }],
-    #     "field_review": "축 다: to-be 갱신 주기 미정. 가정=매월 1일. 질문=실제 갱신 시점?",
-    # },
-}
-
-# 정책 불필요한 순수 UI/표현·내부처리 세부기능 ref ("FN-id#idx"). 1:1 정책 강제 금지.
-UI_SUBFNS: set = set()
-
-# FN '설명'을 세부기능 단위 줄로 교체(선택). {FN-id: [줄1, 줄2, ...]} (줄 수 = sub_functions 수)
-FN_DESC_OVERRIDES: dict = {}
+PI_CONTENT_OVERRIDES: dict = {}
+UI_SUBFNS: set = set()        # 순수 UI/표현 세부기능 ref ("FN-id#idx"). 1:1 정책 강제 금지.
+FN_DESC_OVERRIDES: dict = {}  # FN '설명'을 세부기능 단위 줄로 교체(선택).
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -60,6 +40,30 @@ def load_config(path):
         with open(path, encoding="utf-8") as fh:
             return json.load(fh)
     return {}
+
+
+def overlay_unit(cfg, unit):
+    """config.units[unit] 블록을 top-level 키로 끌어올린다(있으면). 공통 키는 보존."""
+    units = cfg.get("units") or {}
+    if not unit:
+        return cfg
+    if unit not in units:
+        raise SystemExit(f"--unit={unit} 가 units 에 없습니다. 가능: {sorted(units)}")
+    merged = dict(cfg)
+    merged.update(units[unit])
+    return merged
+
+
+def load_unit_overrides(unit):
+    """unit별 override 모듈 로드 → (PI_CONTENT_OVERRIDES, UI_SUBFNS, FN_DESC_OVERRIDES).
+    --unit 미지정이면 모듈 레벨 기본값."""
+    if not unit:
+        return PI_CONTENT_OVERRIDES, UI_SUBFNS, FN_DESC_OVERRIDES
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    mod = importlib.import_module(f"overrides.{unit}")
+    return (getattr(mod, "PI_CONTENT_OVERRIDES", {}),
+            getattr(mod, "UI_SUBFNS", set()),
+            getattr(mod, "FN_DESC_OVERRIDES", {}))
 
 
 def parse_ref(ref):
@@ -93,27 +97,13 @@ def _merge_pgs(existing, derived, fallback):
     return out
 
 
-def _merged_dict(static_value, cfg, key):
-    merged = dict(static_value)
-    extra = cfg.get(key) or {}
-    if not isinstance(extra, dict):
-        raise SystemExit(f"config.{key} must be an object")
-    merged.update(extra)
-    return merged
-
-
-def apply_overrides(spec, cfg=None):
+def apply_overrides(spec, pi_overrides, ui_subfns):
     """PI 본문 필드 세팅 + applies_to 로 FD.subfn_pis/subfn_ui 재구성 + PI.applies_to_functions.
 
-    세부기능↔PI 매핑의 진실원천 = 이 override의 applies_to. 따라서 subfn_pis를 전부 재구성한다(멱등).
+    세부기능↔PI 매핑의 진실원천 = override의 applies_to. 따라서 subfn_pis를 전부 재구성한다(멱등).
+    override에 없는 PI는 FN 미연결(배경 PI)로 남는다 = 의도(STRUCTURAL 아님).
     """
-    cfg = cfg or {}
-    pi_content_overrides = _merged_dict(PI_CONTENT_OVERRIDES, cfg, "pi_content_overrides")
-    ui_subfns = set(UI_SUBFNS) | set(cfg.get("ui_subfns") or [])
-    fn_desc_overrides = _merged_dict(FN_DESC_OVERRIDES, cfg, "fn_desc_overrides")
-
     pi_by = {pi["id"]: pi for pi in spec.get("policy_details", [])}
-    fn_by = {fn["id"]: fn for fn in spec.get("functions", [])}
     fd_by = {fd.get("function_id"): fd for fd in spec.get("function_details", [])}
 
     # 1) 모든 FD의 subfn_pis/subfn_ui 를 sub_functions 길이에 맞춰 초기화
@@ -131,7 +121,7 @@ def apply_overrides(spec, cfg=None):
 
     # 3) PI override 적용
     unknown = []
-    for pid, ov in pi_content_overrides.items():
+    for pid, ov in pi_overrides.items():
         pi = pi_by.get(pid)
         if not pi:
             unknown.append(pid)
@@ -149,6 +139,12 @@ def apply_overrides(spec, cfg=None):
             pi["detail_tables"] = ov["tables"]
         if "field_review" in ov:
             pi["field_review"] = ov["field_review"]
+        if "internal_integration" in ov:
+            pi["internal_integration"] = ov["internal_integration"]
+        if "rule_type" in ov:
+            pi["rule_type"] = ov["rule_type"]
+        if "decision_spec" in ov:
+            pi["decision_spec"] = dict(ov["decision_spec"])
         refs = list(ov.get("applies_to") or [])
         pi["applies_to"] = refs
         fns = []
@@ -162,26 +158,8 @@ def apply_overrides(spec, cfg=None):
                     fd["subfn_pis"][i - 1].append(pid)
         pi["applies_to_functions"] = sorted(fns)
     if unknown:
-        raise SystemExit(f"PI_CONTENT_OVERRIDES unknown PI id: {unknown}")
-
-    # 4) FN description override 적용(선택)
-    unknown_fn = []
-    for fid, lines in fn_desc_overrides.items():
-        fn = fn_by.get(fid)
-        if not fn:
-            unknown_fn.append(fid)
-            continue
-        if not isinstance(lines, list):
-            raise SystemExit(f"FN_DESC_OVERRIDES[{fid}] must be a list")
-        fd = fd_by.get(fid, {})
-        sub_count = len(fd.get("sub_functions") or [])
-        if sub_count and len(lines) != sub_count:
-            raise SystemExit(f"FN_DESC_OVERRIDES[{fid}] length {len(lines)} != sub_functions {sub_count}")
-        fn["description"] = " ".join(f"({i + 1}) {line}" for i, line in enumerate(lines))
-    if unknown_fn:
-        raise SystemExit(f"FN_DESC_OVERRIDES unknown FN id: {unknown_fn}")
-
-    print(f"  [overrides] PI {len(pi_content_overrides)} 적용, UI 세부기능 {len(ui_subfns)}, FN 설명 {len(fn_desc_overrides)}")
+        raise SystemExit(f"PI override unknown PI id: {unknown}")
+    print(f"  [overrides] PI {len(pi_overrides)} 적용, UI 세부기능 {len(ui_subfns)}")
     return spec
 
 
@@ -317,23 +295,84 @@ def apply_term_replacements(spec, cfg):
     return spec
 
 
+def bake_pi_ids_into_names(spec):
+    """정책 상세 name 끝에 ' (<id>)' 부착 — NC스튜디오가 name을 그대로 렌더하므로 ID가 함께 노출된다.
+    빌링 spec 관례와 동일하게 policy_details + policy_groups[].items + policies[].items 의 name을 모두 갱신.
+    멱등: 이미 '(<id>)'로 끝나면 skip. (render_preview.py는 name의 내장 ID를 떼고 재부착 → 이중 표기 없음.)
+    """
+    def bake(obj_list):
+        n = 0
+        for o in obj_list or []:
+            pid = o.get("id")
+            name = o.get("name", "")
+            if not pid or not isinstance(name, str):
+                continue
+            if name.rstrip().endswith(f"({pid})"):
+                continue
+            o["name"] = f"{name} ({pid})"
+            n += 1
+        return n
+
+    n = bake(spec.get("policy_details", []))
+    for pg in spec.get("policy_groups", []):
+        n += bake(pg.get("items"))
+    for pol in (spec.get("policies") or []):
+        n += bake(pol.get("items"))
+    print(f"  [bake_ids] 정책 상세 name {n}건에 ID 부착")
+    return spec
+
+
+def normalize_pg_names(spec):
+    """정책 그룹 name 끝의 '정책' 접미를 제거 — 렌더러·NC스튜디오가 'X 정책'으로 재부착하므로
+    '정책 정책' 중복을 막는다. 빌링 관례(PG name에 '정책' 미포함)와 정합. policy_groups + policies 동시. 멱등."""
+    n = 0
+
+    def strip_one(o):
+        nonlocal n
+        nm = (o.get("name") or "").rstrip()
+        if nm.endswith("정책"):
+            new = nm[:-2].rstrip()
+            if new and new != o.get("name"):
+                o["name"] = new
+                n += 1
+
+    for pg in spec.get("policy_groups", []):
+        strip_one(pg)
+    for pol in (spec.get("policies") or []):
+        strip_one(pol)
+    print(f"  [normalize_pg] 정책 그룹 name '정책' 접미 {n}건 제거")
+    return spec
+
+
 def main(argv):
     config_path = DEFAULT_CONFIG
+    unit = None
     for a in argv[1:]:
         if a.startswith("--config="):
             config_path = a.split("=", 1)[1].strip()
-    cfg = load_config(config_path)
+        elif a.startswith("--unit="):
+            unit = a.split("=", 1)[1].strip()
+    cfg = overlay_unit(load_config(config_path), unit)
     baseline = cfg.get("baseline_spec_path")
     out = cfg.get("spec_path")
     if not baseline or not out:
-        print("ERROR: policy_config.json 에 baseline_spec_path 와 spec_path 를 설정하세요.", file=sys.stderr)
+        print("ERROR: baseline_spec_path/spec_path 없음 (units 사용 시 --unit=<key> 지정).", file=sys.stderr)
         return 2
 
+    pi_ov, ui_ov, _fn_desc = load_unit_overrides(unit)
     spec = json.load(open(baseline, encoding="utf-8"))
-    apply_overrides(spec, cfg)
+    apply_overrides(spec, pi_ov, ui_ov)
     rebuild_rollups(spec, cfg)
     apply_term_replacements(spec, cfg)
+    normalize_pg_names(spec)
+    bake_pi_ids_into_names(spec)
+    # NC 풀스키마 보강 — bake 이후 필수(enrich_policies_items가 baked name을 읽음)
+    from enrich_spec import enrich, emit_requirement_links
+    enrich(spec, cfg.get("business_code", "CS"))
+    # 요구사항↔노드 연결 임베드(NC G2) — enrich 직후·write 직전, cfg 전달(설정 없으면 no-op)
+    emit_requirement_links(spec, cfg)
 
+    os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     with open(out, "w", encoding="utf-8") as fh:
         json.dump(spec, fh, ensure_ascii=False, indent=2)
 
