@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "policy-authoring",
-      "description": "통신 정책서 수준의 명세를 만드는 8종 스킬 묶음 — 계층·기능 분화, 명칭·설명 가독성, 정책 상세(포맷·팩트체크·to-be), ID 정합성 감사(A–L), 새 모듈 온보딩/설치, 미리보기 렌더·배포본 splice, NC스튜디오 업로드 게이트(G2 요구연결·G5 판정축), 전체 워크플로우 오케스트레이션(phase 시퀀스 라우팅). 표준 spec 스키마·policy_config.json multi-unit를 인터페이스로 다른 프로젝트 폴더·소스 형식에 이식 가능.",
+      "description": "통신 정책서 수준의 명세를 만드는 9종 스킬 묶음 — 계층·기능 분화, 명칭·설명 가독성, 정책 상세(포맷·팩트체크·to-be), ID 정합성 감사(A–L), 새 모듈 온보딩/설치, 미리보기 렌더·배포본 splice, NC스튜디오 업로드 게이트(G2 요구연결·G5 판정축), 외부 HTML↔JSON 사전 검토·조건부 복원, 전체 워크플로우 오케스트레이션(phase 시퀀스 라우팅). 표준 spec 스키마·policy_config.json multi-unit를 인터페이스로 다른 프로젝트 폴더·소스 형식에 이식 가능.",
       "author": {
         "name": "MyPart Policy Team"
       },

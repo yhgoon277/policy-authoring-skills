@@ -3,6 +3,11 @@
 > 한 작성 단위(unit)를 `business_code=CS`로 자동초안→NC 합격본까지 끌고 가는 순서.
 > 모든 도구는 `--config=policy_config.json --unit=<unit>` 규약(splice만 `--base=` 추가).
 
+## Phase −1 — (선택) 외부 HTML 인테이크 사전 검토
+- **위임**: `policy-html-json-check`. **외부에서 HTML을 받아 시작할 때만**(타팀 작성·레거시·NC 변환본).
+- **본질**: HTML↔JSON 구조 이격(PI↔PG 매핑·항목 수)을 사전 점검 → 카테고리별로 "HTML이 진실원천?" **사용자 확인** → 승인된 유형만 보수적 복원(`fix_nc_input` 비파괴 `_fixed.json`). 편집 1건 루프 밖(1회).
+- **완료**: reconciled baseline + 이격 리포트(`audit/html_json_mismatch_*.md`). HTML 없이 자동초안(JSON)에서 시작하면 생략.
+
 ## Phase 0 — 세팅·자동초안 변환
 - **위임**: `policy-authoring-setup`.
 - **도구**: `python3 tools/convert_autodraft.py --config=policy_config.json --unit=<unit>` (NC AI 초안 v0.11 → CS baseline). 그다음 `build_spec.py`로 첫 build → `audit_id_integrity.py`로 STRUCTURAL 0 확인.
@@ -36,7 +41,7 @@
 - **완료**: STRUCTURAL 0·SEMANTIC은 의도분만 잔존·그룹 **K**(NC 필수필드, `nc_required_fields` 구동) PASS·`expected_counts` 고정.
 
 ## Phase 6 — 요구사항 커버리지 검토
-- **위임**: 방법론 문서(전용 스킬 미분리, v0.2.1 연기). 대상 repo `audit/REQUIREMENT_COVERAGE_METHOD.md`.
+- **위임**: 방법론 문서(전용 스킬 미분리, 후속 minor 연기). 대상 repo `audit/REQUIREMENT_COVERAGE_METHOD.md`.
 - **도구**: `tools/coverage/prep_coverage_inputs.py`(`prep|inject|qa-input|finalize`)·`req_coverage_map.workflow.js`·`req_coverage_quality.workflow.js`·`coverage_gate.py`.
 - **계약**: 매트릭스 4종 위반 합계 0 = `coverage_gate.py` PASS. decision ∈ {유지, 통합, 수정, 신설, 삭제(범위밖)}.
 - **완료**: 매핑 누락 0·품질 4등급 판정표·갭 BACKLOG. 보강은 편집 1건 루프(신규 PI 0 지향, 기존 PI criteria/notice/표 흡수).
@@ -46,6 +51,7 @@
 - **G2**(요구↔노드 연결): `enrich_spec.emit_requirement_links(spec, cfg)` — tracked 매트릭스에서 REQ→노드(dangling 0)·NC식 ID 요구명 정규화 브리지. config `units.<unit>.requirement_links.nc_only_dispositions`로 미매치 verdict. ⚠️ NC는 빈-노드 verdict 미수용(노드 ≥1 필수). 감사 그룹 **L**(L1 dangling STRUCTURAL).
 - **G5**(decision_spec 판정축): `enrich_spec._route_axes(criteria, rule)` — `_AXIS_KEYWORDS`로 criteria/rule 원문을 판정축에 라우팅(원문 substring 재사용·날조 0). 빈 축은 `"(없음)"` 폐기→키 omit(NC 수용 확인).
 - **완료**: NC 재업로드 G2·G5 PASS. 빈-표현·미해결 표현 0.
+- **라운드트립 점검(선택)**: NC 변환본 HTML이 우리 JSON과 안 맞으면(부분변환 누락) → `policy-html-json-check`로 재점검(NC가 항목을 떨어뜨렸는지).
 
 ## Phase 8 — render + splice 배포본
 - **위임**: `policy-render-deliver`.
