@@ -64,6 +64,7 @@ cp $A/diff_nc_html_json.py   <project>/tools/diff_nc_html_json.py   # HTML↔JSO
 cp $A/nc_html_link.py        <project>/tools/nc_html_link.py        # HTML→PG/PI 매핑 파서
 cp $A/sweep_html_json_gap.py <project>/tools/sweep_html_json_gap.py # PI 수 갭 스캔(인자: DIR 디렉토리)
 cp $A/fix_nc_input.py        <project>/tools/fix_nc_input.py        # HTML 근거 보수적 복원(비파괴)
+cp $A/decision_guide.py      <project>/tools/decision_guide.py      # 사람 결정·수정 안내 가이드(케이스별)
 mkdir -p <project>/tools/coverage
 cp $A/coverage/*.py $A/coverage/*.workflow.js <project>/tools/coverage/
 ```

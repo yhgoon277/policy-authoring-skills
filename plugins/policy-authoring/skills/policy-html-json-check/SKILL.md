@@ -46,6 +46,19 @@ python3 tools/validate_nc_input.py <spec_fixed.json>                            
 - 복원본을 baseline/override에 반영한 뒤 **편집 1건 루프로 검증**: build_spec → audit STRUCTURAL 0 → render. **커밋은 사용자 요청 시만.**
 - 미확정 복원은 본문 강제수정 말고 별도 후보 문서(현업 검토)로 분리.
 
+## 4. 사람 결정 게이트 — `decision_guide` (⚠️ 조용히 통과 금지)
+reconcile(또는 진단만) 후 **반드시** 결정 가이드를 생성해 **사용자에게 케이스별로 제시**한다. 자동으로 끝나지 않는 상태(특히 미지원 포맷)를 사용자가 명확히 인지하고 무엇을 어떻게 고칠지 알게 하는 것이 이 게이트의 목적이다.
+```bash
+python3 tools/decision_guide.py <spec.json> --html <HTML> --fixed <auto_spec.json> --out audit/decision_guide_<날짜>.md
+```
+출력은 케이스별로 **무슨 상태 / 해당 항목 / 무엇을 결정 / 어떻게 수정(이 세션에서)**:
+- **⛔ UNMEASURABLE(미지원 포맷)** — 파서가 HTML PI를 0개 인식. `content_loss=0`은 '무손실'이 아니라 **측정불가**(HTML에 정책 본문이 있어도 못 읽음). → (a) 파서 확장 or (b) 수동 매핑. **이 케이스는 절대 '정합/무손실'로 넘기지 말 것.**
+- **⚠️ CROSSWALK(스킴 상이 자동병합)** — `_crosswalk.json`의 쌍(html_id↔json_id·name)을 보고 오매칭이 없는지 검토.
+- **🟡 DEFERRED(충실성 미달)** — `_recovery_deferred.json`을 HTML 원문과 대조해 **수동 작성**(자동복원 금지=날조 방지).
+- **🔵 JSON_ONLY** — 의도된 NC 정제 vs 누락 검토. **🟢 EMPTYROW** 충전 검증 · **🔧 MECHANICAL** 기계적 정정.
+
+> **규율**: 가이드의 `needs_human=예`면 산출물을 '완료'로 표기하지 말고 **사용자 결정을 받는다**. 특히 `blocking`(⛔)이면 reconcile 신뢰 불가로 보고 사람 개입을 명시 요청한다.
+
 ## 다른 스킬과의 연계
 - **방향 구분(모순 아님)**: 이 스킬 = HTML→JSON(외부 HTML 수입·역방향 점검/복원). `policy-render-deliver` = JSON→HTML(정방향 렌더·수기편집 금지). 이 스킬로 JSON을 confirm/복원한 *뒤*엔 JSON이 단일 진실원천이 되고 render-deliver가 그걸 렌더만 한다.
 - 복원 후 JSON 내부 정합(ID·롤업·커버리지) → `policy-integrity-audit`(JSON 내부 전용, 외부 HTML 무관).

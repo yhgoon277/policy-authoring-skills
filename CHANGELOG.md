@@ -2,6 +2,18 @@
 
 모든 주요 변경을 기록한다. 버전은 [SemVer](https://semver.org/lang/ko/)를 따른다.
 
+## [0.4.3] — 2026-06-30
+
+사람 결정·수정 안내 게이트 (효과성 테스트 백로그 D + 사람-핸드오프 보강).
+
+### Added
+- **`decision_guide.py` 신설** — reconcile 후 사람이 결정·수정할 부분을 케이스별로 결정론적 안내(상태/항목/결정/수정방법): **⛔ UNMEASURABLE**(미지원 포맷) · **⚠️ CROSSWALK**(스킴상이 자동병합) · **🟡 DEFERRED**(충실성 미달) · **🔵 JSON_ONLY** · **🟢 EMPTYROW** · **🔧 MECHANICAL**. `needs_human`/`blocking` 신호로 '조용히 통과' 차단.
+- **`fix_nc_input` crosswalk 투명화(D)** — 스킴상이 자동병합 쌍을 `_crosswalk.json`(html_id↔json_id·name)으로 내보내 사용자 검증 가능. 복원 로그 신규/빈본문충전/crosswalk/deferred 분해.
+
+### Changed
+- **`policy-html-json-check` 스킬** — '4. 사람 결정 게이트' 섹션: reconcile 후 반드시 `decision_guide`를 생성·제시하고 `needs_human=예`면 '완료' 표기 금지·사용자 결정 수령(특히 ⛔ 미지원 포맷은 '정합'으로 넘기지 않음).
+- `policy-authoring-setup` 도구 목록에 `decision_guide.py` 추가.
+
 ## [0.4.2] — 2026-06-30
 
 진단 정직성 + 출력 품질 (효과성 테스트 백로그 B/C 반영).

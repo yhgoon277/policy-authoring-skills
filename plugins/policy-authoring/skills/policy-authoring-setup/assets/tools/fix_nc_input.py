@@ -275,7 +275,7 @@ def _is_empty(s):
     return not (s or "").strip()
 
 
-def recover_content_loss(spec, html_path, log, deferred_out=None):
+def recover_content_loss(spec, html_path, log, deferred_out=None, crosswalk_out=None):
     if not html_path or not os.path.exists(html_path):
         log.append("recover: HTML 없음 → 건너뜀")
         return {"recovered": 0, "deferred": 0, "deferred_path": None}
@@ -300,6 +300,7 @@ def recover_content_loss(spec, html_path, log, deferred_out=None):
     recovered, deferred = 0, []
     created, filled = 0, 0
     crosswalked = 0  # 스킴만 다른 동일 정책 — 신규 추가 회피(빈 본문이면 충전)
+    crosswalk_pairs = []  # D: 어떤 HTML id가 어떤 JSON id로 병합됐는지(사용자 검증용)
     for it in items:
         pid = it.pi_id
         content = (it.content or "").strip()
@@ -325,7 +326,10 @@ def recover_content_loss(spec, html_path, log, deferred_out=None):
             xref = by_name.get(_norm(it.name or "")) if it.name else None
             if xref is not None and xref.get("id") != pid:
                 crosswalked += 1
-                if _is_empty(xref.get("content") or xref.get("rule_statement")):
+                was_empty = _is_empty(xref.get("content") or xref.get("rule_statement"))
+                crosswalk_pairs.append({"html_id": pid, "json_id": xref.get("id"),
+                                        "name": it.name, "json_was_empty": was_empty})
+                if was_empty:
                     xref["content"] = content
                     if faithful_rules and not xref.get("rules"):
                         xref["rules"] = faithful_rules
@@ -377,12 +381,22 @@ def recover_content_loss(spec, html_path, log, deferred_out=None):
                   ensure_ascii=False, indent=2)
         deferred_path = deferred_out
 
-    log.append(f"recover: content_loss 복원 {recovered}건(신규 {created}·충전 {filled}), "
+    crosswalk_path = None
+    if crosswalk_pairs and crosswalk_out:
+        os.makedirs(os.path.dirname(crosswalk_out) or ".", exist_ok=True)
+        json.dump({"module": (spec.get("meta") or {}).get("topic") or os.path.basename(html_path),
+                   "what": "HTML↔JSON PI id 스킴 상이로 같은 이름의 정책에 자동 매칭(crosswalk)된 쌍 — "
+                           "신규 중복 추가를 막았다. *오매칭(다른 정책인데 이름만 같음)이 없는지 사람 검토 권장.*",
+                   "count": len(crosswalk_pairs), "pairs": crosswalk_pairs},
+                  open(crosswalk_out, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        crosswalk_path = crosswalk_out
+    log.append(f"recover: content_loss 복원 {recovered}건(신규 {created}·빈본문충전 {filled}), "
                f"crosswalk(스킴상이 동일정책 중복회피) {crosswalked}건, "
                f"deferred(owning-block FAIL/구획부재) {len(deferred)}건"
                + (f" → {os.path.basename(deferred_path)}" if deferred_path else ""))
     return {"recovered": recovered, "created": created, "filled": filled,
-            "crosswalked": crosswalked, "deferred": len(deferred), "deferred_path": deferred_path}
+            "crosswalked": crosswalked, "crosswalk_path": crosswalk_path,
+            "deferred": len(deferred), "deferred_path": deferred_path}
 
 
 # 패스 이름(선택 실행용). 기본은 전체. AI검색처럼 게이트 PASS·정합만 필요한 모듈은
@@ -418,7 +432,9 @@ def fix_spec(spec_path, html_path=None, out_path=None, passes=ALL_PASSES):
         out_path = spec_path[:-5] + "_fixed.json"
     if "recover" in passes:
         deferred_out = out_path[:-5] + "_recovery_deferred.json"
-        recover_content_loss(spec, html_path, log, deferred_out=deferred_out)
+        crosswalk_out = out_path[:-5] + "_crosswalk.json"
+        recover_content_loss(spec, html_path, log, deferred_out=deferred_out,
+                             crosswalk_out=crosswalk_out)
 
     json.dump(spec, open(out_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
