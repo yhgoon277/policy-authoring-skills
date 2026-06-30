@@ -22,9 +22,11 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import nc_html_link  # noqa: E402
+import nc_owning_block  # noqa: E402
 
 PREFIXES = ("UC", "US", "PR", "FN", "PG", "PI", "ST")
 DEF_COLLECTIONS = ("usecases", "processes", "functions", "policy_groups", "policy_details", "states")
@@ -260,9 +262,108 @@ def drop_phantom_refs(spec, html_text, log):
                + (" — " + ", ".join(sorted({r for _, _, r in removed})) if removed else ""))
 
 
+# ---------------------------------------------------------------- pass: recover
+# ③content_loss 복원 — dev_format(vendored) 파서로 HTML의 PI content/rules를 읽어,
+# 비어있거나 누락된 policy_details에만 채운다. mono(`(PI-…)`)·id="pi-"·말렙드 네스팅을
+# 모두 읽는다(nc_html_link이 못 읽는 형식 포함). 제로-날조: 복원 content가 자기 소유
+# HTML 구획(nc_owning_block)의 부분문자열일 때만 기록하고, 실패는 deferred 매니페스트로
+# 보낸다. 기존 non-empty content는 절대 덮어쓰지 않는다(비파괴).
+RECOVER_NOTE = "recovered_from_html:owning_block_pass"
+
+
+def _is_empty(s):
+    return not (s or "").strip()
+
+
+def recover_content_loss(spec, html_path, log, deferred_out=None):
+    if not html_path or not os.path.exists(html_path):
+        log.append("recover: HTML 없음 → 건너뜀")
+        return {"recovered": 0, "deferred": 0, "deferred_path": None}
+
+    from dev_format_vendor import parse_html  # vendored, stdlib-only
+    html_text = open(html_path, encoding="utf-8").read()
+    _tables, items, _title = parse_html(Path(html_path))
+    segs = nc_owning_block.owning_segments(html_text)
+
+    details = spec.setdefault("policy_details", [])
+    by_id = {d.get("id"): d for d in details}
+    groups = {g.get("id"): g for g in (spec.get("policy_groups", []) or [])}
+
+    recovered, deferred = 0, []
+    created, filled = 0, 0
+    for it in items:
+        pid = it.pi_id
+        content = (it.content or "").strip()
+        if _is_empty(content):
+            continue  # HTML도 본문 없음 → 손실 아님(placeholder)
+        existing = by_id.get(pid)
+        if existing is not None and not _is_empty(existing.get("content") or existing.get("rule_statement")):
+            continue  # 기존 non-empty → 절대 덮어쓰지 않음
+        # content_loss 대상(누락 or 빈 entry). 소유-구획 충실성 게이트.
+        seg = segs.get(pid)
+        if not nc_owning_block.is_faithful(content, seg):
+            deferred.append({
+                "pi_id": pid, "pg_id": it.pg_id, "name": it.name,
+                "reason": ("no_owning_segment" if seg is None else "owning_block_fail"),
+                "content_preview": content[:160],
+            })
+            continue
+        # 충실 → 기록. rules는 구획 충실한 항목만 추가(엄격).
+        faithful_rules = [r for r in (it.rules or []) if nc_owning_block.is_faithful(r, seg)]
+        if existing is None:
+            entry = {
+                "id": pid, "policy_id": it.pg_id or "", "group_id": it.pg_id or "",
+                "name": it.name or pid, "content": content,
+                "source_note": RECOVER_NOTE,
+            }
+            if faithful_rules:
+                entry["rules"] = faithful_rules
+            details.append(entry)
+            by_id[pid] = entry
+            created += 1
+            # 그룹 items 양방향 보강(비파괴: 누락시에만 추가)
+            g = groups.get(it.pg_id)
+            if g is not None:
+                gitems = g.setdefault("items", [])
+                if not any(isinstance(x, dict) and x.get("id") == pid for x in gitems):
+                    gitems.append({"id": pid, "name": it.name or pid})
+        else:
+            existing["content"] = content
+            if faithful_rules and not existing.get("rules"):
+                existing["rules"] = faithful_rules
+            existing["source_note"] = RECOVER_NOTE
+            filled += 1
+        recovered += 1
+
+    deferred_path = None
+    if deferred and deferred_out:
+        manifest = {
+            "module": (spec.get("meta") or {}).get("topic")
+            or os.path.basename(html_path),
+            "html": os.path.basename(html_path),
+            "what": "③content_loss PI whose recovered content FAILED owning-block "
+                    "faithfulness (would be fabrication) — left as content_loss",
+            "count": len(deferred),
+            "options": ["author_now (manual reconcile)", "defer (record reason)",
+                        "out_of_scope (record reason)"],
+            "items": deferred,
+        }
+        os.makedirs(os.path.dirname(deferred_out) or ".", exist_ok=True)
+        json.dump(manifest, open(deferred_out, "w", encoding="utf-8"),
+                  ensure_ascii=False, indent=2)
+        deferred_path = deferred_out
+
+    log.append(f"recover: content_loss 복원 {recovered}건(신규 {created}·충전 {filled}), "
+               f"deferred(owning-block FAIL/구획부재) {len(deferred)}건"
+               + (f" → {os.path.basename(deferred_path)}" if deferred_path else ""))
+    return {"recovered": recovered, "created": created, "filled": filled,
+            "deferred": len(deferred), "deferred_path": deferred_path}
+
+
 # 패스 이름(선택 실행용). 기본은 전체. AI검색처럼 게이트 PASS·정합만 필요한 모듈은
 # --passes phantom 으로 phantom 정리만 적용(정책 상세 재구성 등 비파괴).
-ALL_PASSES = ("rebuild", "module_code", "usecase_join", "split_refs", "ref_format", "phantom")
+# recover: ③content_loss를 dev_format으로 비파괴 복원(소유-구획 충실 게이트).
+ALL_PASSES = ("rebuild", "module_code", "usecase_join", "split_refs", "ref_format", "phantom", "recover")
 
 
 # ---------------------------------------------------------------- driver
@@ -290,6 +391,10 @@ def fix_spec(spec_path, html_path=None, out_path=None, passes=ALL_PASSES):
     out_path = out_path or spec_path.replace("_spec.json", "_spec_fixed.json").replace(".json", ".json")
     if out_path == spec_path:
         out_path = spec_path[:-5] + "_fixed.json"
+    if "recover" in passes:
+        deferred_out = out_path[:-5] + "_recovery_deferred.json"
+        recover_content_loss(spec, html_path, log, deferred_out=deferred_out)
+
     json.dump(spec, open(out_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
     from validate_nc_input import check_spec
