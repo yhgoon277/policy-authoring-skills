@@ -1,7 +1,7 @@
 {
   "name": "policy-authoring",
-  "description": "통신 정책서 수준의 명세(UC→PR→FN→세부기능, PG→PI)를 일관된 품질로 작성·검증·배포하는 방법론 스킬 묶음 9종. 계층·기능 분화 / 명칭·설명 가독성 / 정책 상세(표·콜아웃·근거 + 가나다 팩트체크 + to-be) / ID 정합성 감사(A–L) / 새 모듈 온보딩·설치 + 미리보기 렌더·배포본 splice / NC스튜디오 업로드 게이트(G2 요구연결·G5 판정축) / 외부 HTML↔JSON 사전 검토·조건부 복원 / 전체 워크플로우 오케스트레이션(phase 시퀀스·편집 1건 루프 라우팅)을 포함한다. 표준 spec JSON·policy_config.json multi-unit로 다른 프로젝트·소스 형식에 이식 가능.",
-  "version": "0.3.0",
+  "description": "통신 정책서 수준의 명세(UC→PR→FN→세부기능, PG→PI)를 일관된 품질로 작성·검증·배포하는 방법론 스킬 묶음 10종. 첫 접촉 인테이크 라우터(신규/수정/외부 HTML 분류·핸드오프) / 계층·기능 분화 / 명칭·설명 가독성 / 정책 상세(표·콜아웃·근거 + 가나다라 팩트체크 + to-be) / ID 정합성 감사(A–L) / 새 모듈 온보딩·설치 + 미리보기 렌더·배포본 splice / NC스튜디오 업로드 게이트(G2 요구연결·G5 판정축) / 외부 HTML↔JSON 사전 검토·조건부 복원 / 전체 워크플로우 오케스트레이션(phase 시퀀스·편집 1건 루프 라우팅)을 포함한다. 표준 spec JSON·policy_config.json multi-unit로 다른 프로젝트·소스 형식에 이식 가능.",
+  "version": "0.4.0",
   "author": {
     "name": "MyPart Policy Team"
   },

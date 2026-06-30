@@ -1,7 +1,7 @@
 {
   "name": "policy-authoring",
-  "version": "0.3.0",
-  "description": "Reusable policy and requirements authoring skills for building, editing, auditing, rendering, and delivering UC/PR/FN/sub-function and PG/PI policy specs — now 9 skills including preview render/deliver splice, NC-studio upload gates (requirement links, decision-spec axes), HTML↔JSON pre-flight consistency check & conditional reconcile, and workflow orchestration (phase sequencing across the pipeline).",
+  "version": "0.4.0",
+  "description": "Reusable policy and requirements authoring skills for building, editing, auditing, rendering, and delivering UC/PR/FN/sub-function and PG/PI policy specs — now 10 skills including a first-contact intake router (classify new/revise/external-HTML and hand off), preview render/deliver splice, NC-studio upload gates (requirement links, decision-spec axes), HTML↔JSON pre-flight consistency check & conditional reconcile, and workflow orchestration (phase sequencing across the pipeline).",
   "author": {
     "name": "MyPart Policy Team",
     "url": "https://github.com/yhgoon277"
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "Policy Authoring",
     "shortDescription": "정책서 작성·검증·배포 방법론 스킬 세트",
-    "longDescription": "Nine reusable skills for policy and requirements authoring: hierarchy decomposition, naming readability, policy-detail authoring, integrity audit (groups A–L), new-module setup, preview render & delivery splice, NC-studio upload gates (G2 requirement links, G5 decision-spec axes), HTML↔JSON pre-flight consistency check with human-confirmed conditional reconcile, and workflow orchestration (phase sequencing across the pipeline). The bundled Python tools use a canonical spec JSON and a multi-unit policy_config.json so the workflow can move across project folders and source formats.",
+    "longDescription": "Ten reusable skills for policy and requirements authoring: first-contact intake router (classify new-from-source / revise-from-HTML / revise-spec and hand off), hierarchy decomposition, naming readability, policy-detail authoring (with an opt-in general-policy inference axis, always badged), integrity audit (groups A–L), new-module setup, preview render & delivery splice, NC-studio upload gates (G2 requirement links, G5 decision-spec axes), HTML↔JSON pre-flight consistency check with human-confirmed conditional reconcile, and workflow orchestration (phase sequencing across the pipeline). The bundled Python tools use a canonical spec JSON and a multi-unit policy_config.json so the workflow can move across project folders and source formats.",
     "developerName": "MyPart Policy Team",
     "category": "Productivity",
     "capabilities": [

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Policy NC-Studio Gate"
+  short_description: "NC스튜디오 업로드 게이트 G2(요구사항 연결)·G5(decision_spec 판정축)를 통과하게 준비합니다"
+  default_prompt: "Use $policy-nc-studio-gate to prepare the spec to pass NC-studio G2/G5 health checks."
+policy:
+  allow_implicit_invocation: true

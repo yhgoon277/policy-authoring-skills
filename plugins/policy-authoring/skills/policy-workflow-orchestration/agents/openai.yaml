@@ -1,0 +1,6 @@
+interface:
+  display_name: "Policy Workflow Orchestration"
+  short_description: "작성 단위를 phase 시퀀스와 편집 1건 루프로 끝까지 끌고 가는 최상위 컨덕터"
+  default_prompt: "Use $policy-workflow-orchestration to drive a 작성 단위 through the full phase sequence and the edit-one loop."
+policy:
+  allow_implicit_invocation: true

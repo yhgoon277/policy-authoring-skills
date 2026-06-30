@@ -1,0 +1,6 @@
+interface:
+  display_name: "Policy HTML/JSON Consistency Check"
+  short_description: "외부 HTML과 spec JSON의 구조 이격을 사전 점검하고 사용자 확인 후 조건부 복원합니다"
+  default_prompt: "Use $policy-html-json-check to pre-flight an external/NC-converted HTML against the spec JSON before intake."
+policy:
+  allow_implicit_invocation: true
