@@ -8,35 +8,41 @@ Share to send it to teammates in the same ChatGPT/Codex workspace.
 
 Reproducible CLI install
 ------------------------
-codex plugin marketplace add yhgoon277/policy-authoring-skills --ref main
+codex plugin marketplace add yhgoon277/policy-authoring-skills --ref release   # stable pin (latest dev: --ref main)
 codex plugin add policy-authoring@policy-authoring-skills
 codex plugin list
 
 Direct skill-folder install
 ---------------------------
-Unzip policy-authoring-skills-codex.zip. It contains five skill folders:
+Unzip policy-authoring-skills-codex.zip. It contains ten skill folders:
 
+- policy-intake-router
 - policy-authoring-setup
-- policy-detail-authoring
 - policy-hierarchy-decomposition
-- policy-integrity-audit
 - policy-naming-readability
+- policy-detail-authoring
+- policy-integrity-audit
+- policy-render-deliver
+- policy-nc-studio-gate
+- policy-html-json-check
+- policy-workflow-orchestration
 
-Copy all five folders into one of Codex's skill discovery paths:
+Copy all ten folders into one of Codex's skill discovery paths:
 
 - Personal: ~/.agents/skills/
 - Repo/team: <your-project>/.agents/skills/
 
-Then start a new Codex conversation and check that all five policy-* skills
+Then start a new Codex conversation and check that all ten policy-* skills
 are visible. The Python tools use only the standard library and read project
 settings from policy_config.json.
 
 Slash commands
 --------------
-Slash commands such as /policy-setup and /policy-audit are provided by the
-Codex plugin package. They are available when installing the plugin through the
-Codex marketplace flow. Direct skill-folder installs expose the skills, but not
-the plugin slash commands.
+Slash commands such as /policy-setup and /policy-audit (initial five short-forms)
+are provided by the Codex plugin package; the remaining skills are reachable via
+natural language or the namespaced form /policy-authoring:<skill>. They are
+available when installing the plugin through the Codex marketplace flow. Direct
+skill-folder installs expose the skills, but not the plugin slash commands.
 
 Claude artifacts
 ----------------

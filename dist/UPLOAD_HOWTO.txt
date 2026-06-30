@@ -1,14 +1,18 @@
 policy-authoring 스킬 — claude.ai / Claude Desktop 업로드 방법
 
 1) Settings → Capabilities 에서 Code Execution(코드 실행)·File Creation 켜기 (필수)
-2) 이 압축을 풀면 5개 스킬 ZIP이 나옵니다:
+2) 이 압축을 풀면 10개 스킬 ZIP이 나옵니다:
+   policy-intake-router.zip / policy-authoring-setup.zip /
    policy-hierarchy-decomposition.zip / policy-naming-readability.zip /
-   policy-detail-authoring.zip / policy-integrity-audit.zip / policy-authoring-setup.zip
+   policy-detail-authoring.zip / policy-integrity-audit.zip /
+   policy-render-deliver.zip / policy-nc-studio-gate.zip /
+   policy-html-json-check.zip / policy-workflow-orchestration.zip
 3) Customize → Skills → '+' → Create skill → Upload a skill
    (데스크탑 앱: Settings → Capabilities → Skills → Upload skill)
-   에서 위 ZIP을 하나씩 5개 모두 업로드 (스킬 1개 = ZIP 1개)
-4) 5개 모두 올리면 스킬 간 상호 참조까지 완전해집니다.
+   에서 위 ZIP을 하나씩 10개 모두 업로드 (스킬 1개 = ZIP 1개)
+4) 10개 모두 올리면 스킬 간 상호 참조까지 완전해집니다.
 
 사용: 작업 대상(정책 스펙·이름 목록 등)을 대화에 올리고 자연어로 요청.
 정합성 감사/표 렌더처럼 스크립트가 도는 기능은 스펙 JSON을 업로드한 뒤 요청.
+첫 접촉(새로 시작/기존 수정/HTML 받음)이면 policy-intake-router 가 시작점을 안내합니다.
 자세히는 함께 받은 README.md / INSTALL.md 참고.
