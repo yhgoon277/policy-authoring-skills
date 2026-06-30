@@ -13,6 +13,7 @@
 - **`validate_plugin.py`** (stdlib) — 패키징 검증자: 10 스킬 각 SKILL.md+openai.yaml 존재·frontmatter 유효성·claude/codex `plugin.json` 버전 일치(`--expect-version`·`--expect-skills`).
 - **`DEPLOY.md`** — GitHub private 마켓플레이스 마이그레이션 런북(버전 전략·release 핀·directory→github·autoUpdate·`GITHUB_TOKEN`·검증·롤백).
 - **`build_dist.sh`** — `dist/` ZIP(10 개별 + all + codex) 재현 빌드 스크립트.
+- **도구 하드닝 (Track A)** — 브라운필드 인테이크 보강 + 강제 deferred-추적: `deferred_manifest.py`·`nc_owning_block.py`·`verify_recovery.py` 신설, `fix_nc_input.py`(content_loss 소유-구획 복원)·`build_spec_template.py` 보강. content_loss 복원 파서 `dev_format_vendor.py`(vendored·stdlib) 포함.
 
 ### Changed
 - **P3 제로추론 가드 강화** — 라-축이 "유일한 예외"로 한정·항상 배지+근거·무뱃지 라-값 경로 0(날조 동급) 명문화.
@@ -25,7 +26,10 @@
 
 ### Verified
 - 독립 적대 검수(신규-컨텍스트 에이전트 10) **A 원칙작동·B 회귀·C 음성테스트 검출력 전건 PASS** — 배포 차단 게이트 통과.
-- `validate_plugin.py --expect-version=0.4.0 --expect-skills=10` PASS · 빌드/렌더 도구 무접촉(재현성 불변) · 형제 Track A(`assets/tools/**`·`scripts/**`) 무충돌.
+- `validate_plugin.py --expect-version=0.4.0 --expect-skills=10` PASS · `render_preview.py` 무접촉(P5 field_review/source_note 계약 불변) · Track A 머지 충돌 0(파일경계 분리).
+
+### Notes
+- `dev_format_vendor.py`(~152KB)는 `fix_nc_input` content_loss 복원의 **lazy 의존**(함수 내 import·stdlib)이라 core 배포에 유지한다. 죽은 코드 아님 — 제외 시 HTML→JSON 복원이 깨진다. 추후 minor에서 **optional 분리**(별도 dev 번들 + graceful `ImportError` 안내) 검토 여지.
 
 ## [0.3.0] — 2026-06
 - `policy-html-json-check` 추가(외부 HTML↔JSON 사전 검토·조건부 복원). 9스킬.
