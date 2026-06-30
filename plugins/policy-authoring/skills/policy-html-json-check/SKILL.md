@@ -13,7 +13,7 @@ version: 0.3.0
 > 왜 필요한가: JSON-first 규율(`policy-render-deliver`)은 *우리가* JSON에서 렌더할 때 이격을 막지만, *외부에서 받은* HTML(타팀이 손으로 쓴·NC가 부분변환한)이 JSON과 다를 수 있다. 그 역방향 갭을 잡는 게 이 스킬이다(`policy-integrity-audit`는 JSON 내부만 본다).
 
 ## 언제 (워크플로 두 지점)
-- **인테이크 게이트** — 외부 HTML을 파이프라인에 들일 때(Phase 0 직전, 1회). reconciled baseline → 빌드.
+- **인테이크 게이트** — 외부 HTML을 파이프라인에 들일 때(Phase 0 직전, 1회). reconciled baseline → 빌드. 첫 접촉이 "이 HTML 받았어"면 `policy-intake-router`가 **REVISE-from-HTML**로 분류해 이 스킬로 핸드오프한다(여기가 그 진입점).
 - **NC 라운드트립** — NC 업로드(`policy-nc-studio-gate`) 후, NC 변환본이 우리 JSON과 안 맞는지(부분변환 누락) 재점검.
 
 ## 1. CHECK (사전 검토 — 읽기 전용, 아무것도 안 고침)
@@ -50,4 +50,5 @@ python3 tools/validate_nc_input.py <spec_fixed.json>                            
 - **방향 구분(모순 아님)**: 이 스킬 = HTML→JSON(외부 HTML 수입·역방향 점검/복원). `policy-render-deliver` = JSON→HTML(정방향 렌더·수기편집 금지). 이 스킬로 JSON을 confirm/복원한 *뒤*엔 JSON이 단일 진실원천이 되고 render-deliver가 그걸 렌더만 한다.
 - 복원 후 JSON 내부 정합(ID·롤업·커버리지) → `policy-integrity-audit`(JSON 내부 전용, 외부 HTML 무관).
 - 전체 순서·점검 지점(인테이크·NC 라운드트립) → `policy-workflow-orchestration`.
+- 첫 접촉 분류(외부 HTML 수입 = REVISE-from-HTML) → `policy-intake-router`가 이 스킬로 보낸다.
 - 도구·config 설치 → `policy-authoring-setup`.

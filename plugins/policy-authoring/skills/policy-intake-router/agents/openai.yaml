@@ -1,0 +1,6 @@
+interface:
+  display_name: "Policy Intake Router"
+  short_description: "첫 접촉에서 신규/수정/HTML 수입을 분류해 알맞은 시작 스킬로 핸드오프합니다"
+  default_prompt: "Use $policy-intake-router to classify where to start with this 작성 단위 and hand off."
+policy:
+  allow_implicit_invocation: true
