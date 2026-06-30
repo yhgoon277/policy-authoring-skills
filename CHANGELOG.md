@@ -2,6 +2,17 @@
 
 모든 주요 변경을 기록한다. 버전은 [SemVer](https://semver.org/lang/ko/)를 따른다.
 
+## [0.4.2] — 2026-06-30
+
+진단 정직성 + 출력 품질 (효과성 테스트 백로그 B/C 반영).
+
+### Fixed
+- **`diff_nc_html_json` 거짓음성 해소(B)** — content_loss가 'JSON 부재'만 잡던 것을 'JSON row 존재·content 공란'까지 포함(`counts.content_loss_emptyrow` 분리). 파서가 HTML PI 0개 인식 + JSON엔 PI 존재 시 `unmeasurable: true`로 표기 → '무손실' 오판 차단(통합알림 등 미지원 포맷).
+- **`render_preview` 출처마커 비노출(C)** — 내부 복원 표식 `recovered_from_html:…`를 화면 '근거'에 "HTML 정책서 본문에서 복원"으로 표시(verify_recovery용 spec 표식은 유지).
+
+### Notes
+- 실측 재확인: 통합알림 `unmeasurable=true` · 이벤트미션 content_loss 0→37(공란 row) · 전시 무변경(회귀 0). 잔여 백로그: D 보고분해(데이터 카운트는 이미 제공) · 퍼지 크로스워크.
+
 ## [0.4.1] — 2026-06-30
 
 NC '간소화' 정책서 포맷 호환성 + reconcile 과복원 차단 (실측 NC 1차 정책서 10쌍 효과성 테스트에서 도출).

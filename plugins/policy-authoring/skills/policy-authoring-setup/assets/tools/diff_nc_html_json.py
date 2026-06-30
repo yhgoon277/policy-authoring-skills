@@ -93,14 +93,24 @@ def diagnose(spec_path, html_path=None, fmt="md"):
     drift_pairs = html_drift(html)
     phantom = customer_phantom_refs(d, html)
 
-    # ③ 실내용 손실: HTML 본문 有 · JSON 부재
+    # ③ 실내용 손실: HTML 본문 有 · (JSON 부재 OR JSON content 공란).
+    #    B: 공란 row(JSON에 PI는 있으나 비어있음)도 손실로 포함 — recover가 채우는 대상과
+    #    일치시켜 거짓음성 해소(이전엔 '부재'만 잡고 '공란'은 무손실로 오판).
     content_loss = sorted(
-        pid for pid in (html_ids - json_ids) if html_pi[pid]["has_body"])
+        pid for pid in html_ids
+        if html_pi[pid]["has_body"]
+        and (pid not in json_ids or not json_pi[pid]["has_content"]))
+    content_loss_emptyrow = sorted(
+        pid for pid in (html_ids & json_ids)
+        if html_pi[pid]["has_body"] and not json_pi[pid]["has_content"])
     # ④ placeholder: HTML 본문 無 · JSON 부재
     placeholder = sorted(
         pid for pid in (html_ids - json_ids) if not html_pi[pid]["has_body"])
     # ⑤ JSON-only
     json_only = sorted(json_ids - html_ids)
+    # B: 측정불가 — 파서가 HTML PI를 0개 인식했는데 JSON엔 PI가 있고 HTML 본문이 존재.
+    #    이 경우 content_loss=0은 '무손실'이 아니라 '측정불가'(미지원 포맷 가능성).
+    unmeasurable = bool(len(html_ids) == 0 and len(json_ids) > 0 and html.strip())
 
     # PG 수준 요약
     html_pg = set(pg_pi)
@@ -114,7 +124,9 @@ def diagnose(spec_path, html_path=None, fmt="md"):
             "json_policy_details": len(json_ids),
             "html_pg_sections": len(html_pg),
             "json_policy_groups": len(json_pg),
+            "content_loss_emptyrow": len(content_loss_emptyrow),
         },
+        "unmeasurable": unmeasurable,
         "drift": {
             "count": len(drift_pairs),
             "examples": [{"div_anchor": a, "title_canonical": b} for a, b in drift_pairs[:20]],

@@ -488,6 +488,10 @@ def render_policy_details(spec):
                 parts.append(f'<div class="policy-notice"><b>💬 고객 안내</b>{_e(cn)}</div>')
             meta = []
             sn = pi.get("source_note") or ""
+            # C: 내부 복원 마커(recovered_from_html:owning_block_pass[:crosswalk])는
+            #    verify_recovery용 기계 표식이므로 화면 '근거'엔 사람 친화 문구로 표시.
+            if sn.strip().startswith("recovered_from_html"):
+                sn = "HTML 정책서 본문에서 복원"
             if sn.strip():
                 meta.append(f'<span class="policy-meta-row"><span class="pm-label">근거</span> · {_e(sn)}</span>')
             ref_items = []
