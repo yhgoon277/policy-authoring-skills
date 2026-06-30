@@ -287,10 +287,19 @@ def recover_content_loss(spec, html_path, log, deferred_out=None):
 
     details = spec.setdefault("policy_details", [])
     by_id = {d.get("id"): d for d in details}
+    # A. id-스킴 크로스워크 인덱스: HTML과 JSON의 PI id 스킴이 다를 때
+    #    (예: PI-…-APPROVAL-001-001 ↔ PI-…-APR-001) 같은 논리 정책을 신규 PI로
+    #    중복 추가(과복원)하지 않기 위해 *정규화 이름*으로 기존 PI를 찾는다.
+    by_name = {}
+    for d in details:
+        nm = _norm(d.get("name") or "")
+        if nm:
+            by_name.setdefault(nm, d)
     groups = {g.get("id"): g for g in (spec.get("policy_groups", []) or [])}
 
     recovered, deferred = 0, []
     created, filled = 0, 0
+    crosswalked = 0  # 스킴만 다른 동일 정책 — 신규 추가 회피(빈 본문이면 충전)
     for it in items:
         pid = it.pi_id
         content = (it.content or "").strip()
@@ -311,6 +320,19 @@ def recover_content_loss(spec, html_path, log, deferred_out=None):
         # 충실 → 기록. rules는 구획 충실한 항목만 추가(엄격).
         faithful_rules = [r for r in (it.rules or []) if nc_owning_block.is_faithful(r, seg)]
         if existing is None:
+            # A. 크로스워크: id는 JSON에 없지만 같은 정규화 이름의 PI가 이미 있으면
+            #    (스킴만 다른 동일 정책) 신규 PI로 중복 추가하지 않는다(과복원 차단).
+            xref = by_name.get(_norm(it.name or "")) if it.name else None
+            if xref is not None and xref.get("id") != pid:
+                crosswalked += 1
+                if _is_empty(xref.get("content") or xref.get("rule_statement")):
+                    xref["content"] = content
+                    if faithful_rules and not xref.get("rules"):
+                        xref["rules"] = faithful_rules
+                    xref["source_note"] = RECOVER_NOTE + ":crosswalk"
+                    filled += 1
+                    recovered += 1
+                continue  # 기존 non-empty면 동일 정책 → JSON판 유지(무변경)
             entry = {
                 "id": pid, "policy_id": it.pg_id or "", "group_id": it.pg_id or "",
                 "name": it.name or pid, "content": content,
@@ -320,6 +342,8 @@ def recover_content_loss(spec, html_path, log, deferred_out=None):
                 entry["rules"] = faithful_rules
             details.append(entry)
             by_id[pid] = entry
+            if it.name:
+                by_name.setdefault(_norm(it.name), entry)  # 신규 이름 등록(후속 중복 회피)
             created += 1
             # 그룹 items 양방향 보강(비파괴: 누락시에만 추가)
             g = groups.get(it.pg_id)
@@ -354,10 +378,11 @@ def recover_content_loss(spec, html_path, log, deferred_out=None):
         deferred_path = deferred_out
 
     log.append(f"recover: content_loss 복원 {recovered}건(신규 {created}·충전 {filled}), "
+               f"crosswalk(스킴상이 동일정책 중복회피) {crosswalked}건, "
                f"deferred(owning-block FAIL/구획부재) {len(deferred)}건"
                + (f" → {os.path.basename(deferred_path)}" if deferred_path else ""))
     return {"recovered": recovered, "created": created, "filled": filled,
-            "deferred": len(deferred), "deferred_path": deferred_path}
+            "crosswalked": crosswalked, "deferred": len(deferred), "deferred_path": deferred_path}
 
 
 # 패스 이름(선택 실행용). 기본은 전체. AI검색처럼 게이트 PASS·정합만 필요한 모듈은

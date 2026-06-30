@@ -17,11 +17,21 @@ PG 귀속은 마커('정책 항목 상세') 직전의 *정의 컨텍스트*(<hN 
 결정한다 — 본문 곳곳의 교차참조 href="#PG-..."는 구획 시작이 아니므로 무시한다.
 PG 헤딩 id는 bare(PG-...) 또는 접두(pg-PG-...) 둘 다 인식한다.
 
+⑤ 견고 파서 폴백(dev_format_vendor): 위 마커/헤딩-id 기반 변형이 못 잡는 포맷
+   — PG id가 헤딩 *텍스트*(<h4>… (PG-…)</h4>)에 있고 PI가 div.policy-item-title +
+   <span class="mono">(PI-…)</span> 인 '간소화' 변형(전시·이벤트미션·나의데이터통화·
+   청구및수납 등) — 은 dev_format_vendor.parse_html 로 PolicyDetailItem(pi_id·pg_id·
+   name·content)을 받아 pg_id로 묶어 보강한다. 레거시가 더 적게 찾을 때만 교체하므로
+   기존 포맷은 무영향(회귀 0). PI id가 아예 없는 prose 포맷(통합알림: 판단축 완결표)은
+   양 파서 모두 빈 매핑 → 트랙 B 신호.
+
 반환: OrderedDict  PG_id -> [ {id, name, body}, ... ]  (PG 내 PI 순서·중복제거 보존)
-PI가 전혀 없는 모듈(AI검색·통합알림: prose 렌더)은 빈 매핑 → 트랙 B 신호.
 """
+import os
 import re
+import tempfile
 from collections import OrderedDict
+from pathlib import Path
 
 MARKER = "정책 항목 상세"
 # PG 헤딩: id="PG-..." 또는 id="pg-PG-..."(접두) 모두 — 캡처는 정본 PG id
@@ -89,6 +99,43 @@ def _region_end(html, p):
     return min(cands)
 
 
+def _devfmt_mapping(html):
+    """dev_format_vendor 견고 파서로 PG->PI 매핑 복원(레거시 변형 미커버 포맷용).
+
+    dev_format_vendor.parse_html 는 파일 경로를 받으므로 임시파일에 써서 호출한다.
+    실패(미설치·파싱오류)하면 None(폴백 안 함)."""
+    try:
+        import dev_format_vendor
+    except Exception:
+        return None
+    fd, tmp = tempfile.mkstemp(suffix=".html")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(html)
+        res = dev_format_vendor.parse_html(Path(tmp))
+    except Exception:
+        return None
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+    items = res[1] if isinstance(res, tuple) else res
+    mapping = OrderedDict()
+    for it in items:
+        pid = (getattr(it, "pi_id", "") or "").strip()
+        if not pid:
+            continue
+        pg = (getattr(it, "pg_id", "") or "PG-UNKNOWN").strip() or "PG-UNKNOWN"
+        bucket = mapping.setdefault(pg, [])
+        if any(x["id"] == pid for x in bucket):
+            continue
+        bucket.append({"id": pid,
+                       "name": (getattr(it, "name", "") or "").strip(),
+                       "body": (getattr(it, "content", "") or "").strip()})
+    return mapping
+
+
 def parse_pg_pi(html):
     """HTML 문자열 → OrderedDict PG -> [{id,name,body}]."""
     mapping = OrderedDict()
@@ -138,6 +185,12 @@ def parse_pg_pi(html):
                     ids.append(x)
             for pid in ids:
                 bucket.append({"id": pid, "name": "", "body": ""})
+    # ⑤ 견고 파서 폴백: 레거시가 더 적게(또는 0) 찾았으면 dev_format_vendor 결과로 교체.
+    #   dev ≥ legacy 가 검증돼 있어(추가분은 실존 PI) 회귀 없이 커버리지만 넓힌다.
+    legacy_total = sum(len(v) for v in mapping.values())
+    dev_map = _devfmt_mapping(html)
+    if dev_map is not None and sum(len(v) for v in dev_map.values()) > legacy_total:
+        return dev_map
     return mapping
 
 

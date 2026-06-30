@@ -2,6 +2,18 @@
 
 모든 주요 변경을 기록한다. 버전은 [SemVer](https://semver.org/lang/ko/)를 따른다.
 
+## [0.4.1] — 2026-06-30
+
+NC '간소화' 정책서 포맷 호환성 + reconcile 과복원 차단 (실측 NC 1차 정책서 10쌍 효과성 테스트에서 도출).
+
+### Fixed
+- **`nc_html_link.parse_pg_pi` 포맷 폴백** — '간소화' 포맷(텍스트 PG 헤딩 `<h4>…(PG-…)</h4>` + `policy-item-title`+`<span class="mono">(PI-…)</span>`)을 레거시 6변형이 못 읽어 진단을 0으로 오보 → `dev_format_vendor`로 폴백(레거시보다 더 찾을 때만, 회귀 0). diff/sweep 진단 정상화(5쌍 0→실측).
+- **`splice_nc_html.section_span` 속성 헤딩** — `<h2 id="6.-정책-정의">`처럼 속성 붙은 섹션 헤딩을 못 찾아 splice 실패 → `<h2[^>]*>` 허용. 골든 렌더 정상화.
+- **`fix_nc_input.recover` id-스킴 크로스워크** — HTML↔JSON PI id 스킴 상이(예 APPROVAL↔APR) 시 같은 논리 정책을 신규 PI로 중복 추가(과복원)하던 것을 *정규화 이름 매칭*으로 차단(빈 본문이면 충실 충전). 결제 −100·상품상세 −55, PASS 쌍 회귀 0.
+
+### Notes
+- 실측 검증: NC '1차 정책서' 10쌍 — **날조 0**(owning-block 게이트), 골든 렌더 10/10. 백로그(미적용): content_loss 빈본문/미지원 포맷 거짓음성, 퍼지 크로스워크, 출처마커 비노출.
+
 ## [0.4.0] — 2026-06-30
 
 5운영원칙 반영(첫 접촉 라우팅 + 일반정책 추론 opt-in) · 10스킬 · GitHub private 마켓플레이스 + autoUpdate 배포.

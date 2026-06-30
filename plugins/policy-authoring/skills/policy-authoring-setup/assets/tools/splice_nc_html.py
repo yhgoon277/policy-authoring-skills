@@ -71,12 +71,13 @@ def inject_css(base_html: str, css_block: str) -> tuple[str, str]:
 
 
 def section_span(html: str, num: int) -> tuple[int, int]:
-    """<h2>N. ...</h2> 시작 ~ 다음 <h2> 직전."""
-    m = re.search(rf"<h2>\s*{num}\.", html)
+    """<h2 ...>N. ...</h2> 시작 ~ 다음 <h2 ...> 직전. h2의 속성(id= 등)을 허용한다
+    (NC 변환본은 <h2 id="6.-정책-정의">처럼 헤딩에 id 속성을 붙이기도 한다)."""
+    m = re.search(rf"<h2[^>]*>\s*{num}\.", html)
     if not m:
         raise SystemExit(f"섹션 {num} <h2> 마커 없음")
     start = m.start()
-    nxt = re.search(r"<h2>", html[m.end():])
+    nxt = re.search(r"<h2[^>]*>", html[m.end():])
     end = m.end() + nxt.start() if nxt else len(html)
     return start, end
 
