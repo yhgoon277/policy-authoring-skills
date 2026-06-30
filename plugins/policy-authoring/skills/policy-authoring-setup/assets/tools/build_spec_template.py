@@ -163,6 +163,36 @@ def apply_overrides(spec, pi_overrides, ui_subfns):
     return spec
 
 
+def link_unlinked_pis_to_existing_pg(spec):
+    """group_id/policy_id 가 비어 렌더 6.나에서 누락되는 PI를, 자기 ID로부터 '정준 PG'를 유도해
+    그 PG가 policy_groups 에 실제로 존재할 때만 group_id 로 연결한다(보수적·결정적).
+
+    유도 규칙(데이터셋 공통 ID 문법): PI-<BIZ>-<DOM>-<NNN>-<II> → PG-<BIZ>-<DOM>-<NNN>
+    (마지막 항목 일련번호만 제거; 'PG-'+segments[1:-1]). 결과 PG가 목록에 없으면 건드리지 않는다.
+
+    절대 금지(자의적 ID 정규화 금지와 동일 원칙):
+      - PI/PG ID 자체를 바꾸지 않는다(유도값을 PI에 다시 쓰지 않음).
+      - 이미 group_id/policy_id 가 있는 PI(=명시 링크, 누락 PG 가리키는 dangling 포함)는 손대지 않는다 → 그건 담당자 결정(매니페스트).
+      - 존재하지 않는 PG를 만들지 않는다.
+    효과: 소스가 단지 링크 필드를 비워둔 PI만 복구. clean 모듈은 unlinked PI=0 → no-op.
+    """
+    pg_ids = {g["id"] for g in spec.get("policy_groups", [])}
+    linked = 0
+    for pi in spec.get("policy_details", []):
+        if pi.get("group_id") or pi.get("policy_id"):
+            continue
+        parts = str(pi.get("id", "")).split("-")
+        if len(parts) < 4 or parts[0] != "PI":
+            continue
+        cand = "PG-" + "-".join(parts[1:-1])
+        if cand in pg_ids:
+            pi["group_id"] = cand
+            linked += 1
+    if linked:
+        print(f"  [link_pi_pg] 비링크 PI {linked}건을 자기 ID 유도 정준 PG(존재 확인)로 연결")
+    return spec
+
+
 def rebuild_rollups(spec, cfg, strip_pr_only=False):
     """진실원천(subfn_pis·group_id·applies_to)에서 롤업·파생·양방향·trace_matrix 재계산 (멱등).
 
@@ -362,6 +392,7 @@ def main(argv):
     pi_ov, ui_ov, _fn_desc = load_unit_overrides(unit)
     spec = json.load(open(baseline, encoding="utf-8"))
     apply_overrides(spec, pi_ov, ui_ov)
+    link_unlinked_pis_to_existing_pg(spec)
     rebuild_rollups(spec, cfg)
     apply_term_replacements(spec, cfg)
     normalize_pg_names(spec)
