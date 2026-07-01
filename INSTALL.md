@@ -16,6 +16,12 @@
 
 ## 1. 설치
 
+> ⚠️ **마켓플레이스 이름은 도구별로 다릅니다(정상 — 오류 아님)**: 각 도구가 자기 매니페스트를 읽기 때문입니다.
+> - **Claude Code**: `mypart-skills` → `policy-authoring@mypart-skills`
+> - **Codex**: `policy-authoring-skills` → `policy-authoring@policy-authoring-skills`
+>
+> **autoUpdate는 Claude 전용**입니다(마켓플레이스 entry `autoUpdate:true`). **Codex엔 autoUpdate가 없으니** 갱신은 수동 `codex plugin marketplace upgrade policy-authoring-skills`로 합니다. 두 도구 모두 **`release` 핀**을 씁니다(검증 커밋만).
+
 ### 방식 A — claude.ai / Claude Desktop (팀원 대부분 · Skills 업로드)
 1. **Settings → Capabilities**에서 **Code Execution·File Creation을 켭니다**(없으면 스킬 스크립트가 안 돎). Team/Enterprise는 관리자가 Org 설정에서 Skills+Code Execution 활성화.
 2. 배포물에서 **스킬 ZIP 10개**를 준비합니다(repo의 `dist/` 폴더, 또는 번들 `policy-authoring-skills-all.zip`을 풀면 10개가 나옴).
