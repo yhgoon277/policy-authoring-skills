@@ -7,12 +7,19 @@
 같은 흐름을 hub에 제공한다. 렌더 단일원천 = render_preview.py 산출 preview(섹션 donor) —
 렌더 로직을 중복 구현하지 않는다.
 
+구간 분리(R3 헤드 완전보존 + R1 §5~§6 골든):
+  §0~§4(문서히스토리·개요·주요용어·유즈케이스/상태전이 **다이어그램**·프로세스 정의 **케이스표**)는
+  원천 HTML을 그대로 둔다(완전보존 — NC가 골든보다 풍부한 구간: 손으로 그린 인라인 SVG·프로세스
+  케이스 분기표 유지, 개요는 담당자 자유 서술). NC가 정책 상세를 평면 렌더하는 §5 기능·§6 정책만
+  골든 스타일 preview로 교체한다. 따라서 **기본 sections=[5,6]**. (§4를 골든 렌더하면 대다수
+  모듈의 §4 다이어그램·케이스표가 손실→R3 위배이므로 §4는 보존한다.)
+
 동작:
   1) preview <style>에서 리치 클래스(policy-*·pdt-* 등) CSS 규칙을 발췌해 base 마지막
-     </style> 앞에 마커 블록으로 주입(멱등 — 재실행 시 교체).
+     </style> 앞에 마커 블록으로 주입(멱등 — 재실행 시 교체). 헤드(§5 이전)는 불변.
   2) --sections(기본 5,6)의 <h2>N. …</h2> ~ 다음 <h2> 범위를 preview 동일 섹션으로 교체.
-     (4장 프로세스 정의는 NC 자체 렌더가 케이스 분기·다이어그램 포함으로 더 풍부 → 기본 보존.)
   3) samples/deliverable/<base 파일명>_spliced.html 로 저장 + 리치 클래스 카운트 보고.
+  ※ R5 도메인코드 현행화 모듈은 헤드 ID도 목표코드로 relabel해야 본문과 정합(별도 단계).
 
 사용:
   python3 tools/splice_nc_html.py --unit=hub --base="~/Downloads/NC_..._v0.14.html"
@@ -25,7 +32,8 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from build_spec import load_config, overlay_unit  # noqa: E402
+# build_spec(허브 설정 로더)는 main()에서만 필요 → 지연 import. 코어 함수
+# (extract_rich_css·inject_css·section_span·splice_sections)는 설정 의존 없이 단독 재사용.
 
 CSS_MARK_BEGIN = "/* == splice_nc_html: 리치 렌더 CSS (자동 주입) == */"
 CSS_MARK_END = "/* == /splice_nc_html == */"
@@ -105,6 +113,7 @@ def main(argv) -> int:
             out_path = os.path.expanduser(a.split("=", 1)[1])
         elif a.startswith("--sections="):
             sections = [int(x) for x in a.split("=", 1)[1].split(",") if x.strip()]
+    from build_spec import load_config, overlay_unit  # 지연 import(허브 설정 로더)
     cfg = overlay_unit(load_config(config_path), unit)
     preview_path = cfg.get("preview_out")
     if not base_path or not os.path.isfile(base_path):

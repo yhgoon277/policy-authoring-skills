@@ -82,6 +82,23 @@ def _fn_by_pr(spec):
     return by
 
 
+def _functions_for_process(spec, pr, fn_by_id):
+    """프로세스의 관련 기능(N:M) 함수 객체 목록 — 원본 진실원천인 related_functions 우선,
+    없으면 process_id 폴백. §4·§5 공용(붕괴 방지: pr→fn은 1:1이 아니라 N:M)."""
+    fns, seen = [], set()
+    for fid in (pr.get("related_functions") or []):
+        f = fn_by_id.get(fid)
+        if f and fid not in seen:
+            fns.append(f)
+            seen.add(fid)
+    if not fns:  # 폴백: process_id 기반(레거시 spec)
+        for f in spec.get("functions", []):
+            if f.get("process_id") == pr.get("id") and f["id"] not in seen:
+                fns.append(f)
+                seen.add(f["id"])
+    return fns
+
+
 def _pis_by_pg(spec):
     by = defaultdict(list)
     for pi in spec.get("policy_details", []):
@@ -313,7 +330,7 @@ def render_usecases_section(spec):
     urows = [[f'<span class="mono">{_e(u.get("id"))}</span>', _e(u.get("actor")), _e(u.get("name")),
               _e(u.get("description")), f'<span class="center">{_e(u.get("process_target"))}</span>']
              for u in spec.get("usecases", [])]
-    out.append(_table("usecase-list-table", ["유즈케이스 ID", "액터", "유즈케이스명", "설명", "프로세스화"], urows))
+    out.append(_table("usecase-list-table", ["유즈케이스 ID", "액터", "유즈케이스명", "설명", "프로세스 정의 대상"], urows))
     ucd = _usecase_diagram(spec)
     if ucd:
         out.append("<h3>다. 유즈케이스 다이어그램</h3>\n")
@@ -329,17 +346,29 @@ def render_usecases_section(spec):
             out.append(_table("state-code-table", ["상태 코드", "상태명", "정의", "대표 후속 처리"], srows))
         if strans:
             out.append("<h4>2) 상태 전이 기준</h4>\n")
-            trows = [["<br>".join(_e(x) for x in (t.get("usecase_ids") or [])), _e(t.get("current_state")),
-                      _e(t.get("event")), _e(t.get("next_state")), _e(t.get("criteria"))] for t in strans]
+            _id2n = {s.get("id"): s.get("name") for s in sts}
+            _n2id = {s.get("name"): s.get("id") for s in sts}
+
+            def _stcell(v):
+                v = v or ""
+                if v in _id2n:
+                    name, code = _id2n[v], v
+                elif v in _n2id:
+                    name, code = v, _n2id[v]
+                else:
+                    return _e(v)
+                return f'{_e(name)}<br/><span class="mono">{_e(code)}</span>' if code else _e(name)
+            trows = [[_stcell(t.get("current_state")), _e(t.get("event")),
+                      _stcell(t.get("next_state")), _e(t.get("criteria"))] for t in strans]
             out.append(_table("state-transition-table",
-                              ["유즈케이스", "현재 상태", "전이 이벤트", "다음 상태", "처리 기준"], trows))
+                              ["현재 상태", "전이 이벤트", "다음 상태", "처리 기준 및 후속 처리"], trows))
         out.append(_state_diagram(spec))
     return "".join(out)
 
 
 def render_processes(spec):
     uc_order, prs_by_uc, uc_by_id = _uc_groups(spec)
-    fn_by_pr = _fn_by_pr(spec)
+    fn_by_id = {f["id"]: f for f in spec.get("functions", [])}
     pg_by_id = {pg["id"]: pg for pg in spec.get("policy_groups", [])}
     out = ["<h2>4. 프로세스 정의</h2>\n<h3>가. 프로세스 목록</h3>\n",
            '<p class="plain-text">프로세스는 고객 또는 운영자가 경험하는 순서대로 작성한다.<br/></p>\n']
@@ -353,7 +382,7 @@ def render_processes(spec):
         out.append(f'<h4>{idx}) {_e(uc.get("name", uid))} (<span class="mono">{_e(uid)}</span>)</h4>\n')
         rows = []
         for pr in prs:
-            fns = fn_by_pr.get(pr["id"], [])
+            fns = _functions_for_process(spec, pr, fn_by_id)
             fns_html = "<br>".join(f'{_e(f["name"])} (<span class="mono">{_e(f["id"])}</span>)' for f in fns) or "—"
             pgs = [p for p in (pr.get("related_policies") or []) if "(CROSS" not in (p or "")]
             pgs_html = "<br>".join(
@@ -367,7 +396,7 @@ def render_processes(spec):
 
 def render_functions(spec):
     uc_order, prs_by_uc, _ = _uc_groups(spec)
-    fn_by_pr = _fn_by_pr(spec)
+    fn_by_id = {f["id"]: f for f in spec.get("functions", [])}
     fd_by_id = {fd["function_id"]: fd for fd in spec.get("function_details", [])}
     pi_by_id = {pi["id"]: pi for pi in spec.get("policy_details", [])}
     out = ["<h2>5. 기능 정의</h2>\n<h3>가. 기능 목록</h3>\n",
@@ -375,7 +404,7 @@ def render_functions(spec):
     idx = 0
     for uid in uc_order:
         for pr in prs_by_uc.get(uid) or []:
-            fns = fn_by_pr.get(pr["id"], [])
+            fns = _functions_for_process(spec, pr, fn_by_id)
             if not fns:
                 continue
             idx += 1
@@ -383,7 +412,7 @@ def render_functions(spec):
             rows = []
             for fn in fns:
                 fd = fd_by_id.get(fn["id"], {})
-                subs = fd.get("sub_functions") or []
+                subs = fd.get("sub_functions") or fn.get("details") or []
                 subfn_pis = fd.get("subfn_pis") or []
                 subfn_ui = fd.get("subfn_ui") or []
                 sub_lines = []
@@ -399,8 +428,11 @@ def render_functions(spec):
                         sub_lines.append(_e(s))
                 pis = fd.get("related_policy_details") or fn.get("related_policy_details") or []
                 pis_html = "<br>".join(
-                    f'{_e((pi_by_id.get(p) or {}).get("name", "").split(" (")[0])} (<span class="mono">{_e(p)}</span>)'
+                    f'{_e((pi_by_id.get(p) or {}).get("name", "").split(" (")[0])} ({_e(p)})'
                     for p in pis if p in pi_by_id) or "—"
+                if pis_html != "—" and (fd.get("related_policy_details_approx")
+                                        or fn.get("related_policy_details_approx")):
+                    pis_html = '<span class="policy-review-flag">근사·검토 필요</span><br>' + pis_html
                 rows.append([f'<span class="mono">{_e(fn["id"])}</span>', _e(fn.get("name")),
                              _multiline(fn.get("description")), "<br>".join(sub_lines) or "—", pis_html])
             out.append(_table("function-list-table",
@@ -426,7 +458,9 @@ def render_policy_list(spec):
             out.append(f'<h4>{idx}) {_e(pr["name"])} (<span class="mono">{_e(pr["id"])}</span>)</h4>\n')
             rows = []
             for pg in pgs:
-                items = "<br>".join(_e(pi.get("name", "")) for pi in pis_by_pg.get(pg["id"], [])) or "—"
+                items = "<br>".join(
+                    f'{_e(pi.get("name", "").split(" (PI-")[0].rstrip())} ({_e(pi.get("id"))})'
+                    for pi in pis_by_pg.get(pg["id"], [])) or "—"
                 rows.append([f'<span class="mono">{_e(pg["id"])}</span>', _e(pg.get("name")),
                              _e(pg.get("description")), items])
             out.append(_table("policy-list-table", ["정책 ID", "정책명", "설명", "정책 상세"], rows, [150, 190, None, 260]))

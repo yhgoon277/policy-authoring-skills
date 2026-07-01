@@ -236,9 +236,8 @@
   .state-code-table th:nth-child(2), .state-code-table td:nth-child(2) { width: 18% !important; }
   .state-code-table th:nth-child(3), .state-code-table td:nth-child(3) { width: 40% !important; }
   .state-code-table th:nth-child(4), .state-code-table td:nth-child(4) { width: 26% !important; }
-  .state-transition-table th:nth-child(1), .state-transition-table td:nth-child(1) { width: 14% !important; }
-  .state-transition-table th:nth-child(2), .state-transition-table td:nth-child(2) { width: 16% !important; }
+  .state-transition-table th:nth-child(1), .state-transition-table td:nth-child(1) { width: 16% !important; }
+  .state-transition-table th:nth-child(2), .state-transition-table td:nth-child(2) { width: 20% !important; }
   .state-transition-table th:nth-child(3), .state-transition-table td:nth-child(3) { width: 16% !important; }
-  .state-transition-table th:nth-child(4), .state-transition-table td:nth-child(4) { width: 14% !important; }
-  .state-transition-table th:nth-child(5), .state-transition-table td:nth-child(5) { width: 40% !important; }
+  .state-transition-table th:nth-child(4), .state-transition-table td:nth-child(4) { width: 48% !important; }
 </style>

@@ -1,6 +1,6 @@
 {
   "name": "policy-authoring",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Reusable policy and requirements authoring skills for building, editing, auditing, rendering, and delivering UC/PR/FN/sub-function and PG/PI policy specs — now 10 skills including a first-contact intake router (classify new/revise/external-HTML and hand off), preview render/deliver splice, NC-studio upload gates (requirement links, decision-spec axes), HTML↔JSON pre-flight consistency check & conditional reconcile, and workflow orchestration (phase sequencing across the pipeline).",
   "author": {
     "name": "MyPart Policy Team",

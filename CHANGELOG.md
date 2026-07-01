@@ -2,6 +2,23 @@
 
 모든 주요 변경을 기록한다. 버전은 [SemVer](https://semver.org/lang/ko/)를 따른다.
 
+## [0.5.0] — 2026-07-01
+
+**5원칙 완료 게이트를 플러그인에 embody** — 저작 결과를 R1~R5로 자동 검수·완료 확정. 효과성 테스트(NC 1차 정책서 9쌍, 청구및수납 제외) 기반 TDD.
+
+### Added
+- **`run_acceptance.py`** — 5원칙 통합 완료 게이트(단일 진입점). **R1** 골든 스타일 · **R2** 입력 게이트(`validate_spec_input` errors=0) · **R3** 원천 보존(손실·발산·헤드) · **R4** 완료 정합(JSON↔HTML) · **R5** 도메인코드 현행화. **3-상태**: DONE / BLOCKED(사람결정 대기) / FAIL(배포물 원칙 RED). 미지원 포맷·게이트 부재는 BLOCKED로 분류(FAIL 오判 방지).
+- **`build_deliverable.py`** — 배포 파이프라인 진입점: rebuild→derive→normalize(R5)→render→splice[5,6]→run_acceptance를 한 번에.
+- **오라클/도구**: `compare_fidelity`(T-R1/R3: 손실+발산+HEAD_PRESERVED+골든 스타일, principle 태그) · `completion_audit`(T-R4) · `source_html_index`(원천 SSOT 매핑) · `domain_code_map`/`domain_code_normalize`(R5 권위표·relabel·T-R5) · `rebuild_policy_from_source`(원천 정본 재구성) · `fn_pi_derive`(FN→PI PG경유 근사).
+
+### Changed
+- **배포물 구조(R3 구간 분리)**: **§0~§4 원천 HTML 완전보존**(문서히스토리·개요·유즈케이스/상태전이 다이어그램·프로세스 케이스표 — NC가 골든보다 풍부) + **§5~§6 골든 렌더**(NC 평면→리치). `splice_nc_html` 기본 `--sections=5,6` 유지, `build_spec` import 지연(코어 함수 단독 재사용).
+- **`rebuild_policy_from_source` PG 할당 견고화** — `dev_format_vendor` pg_id 누락 시 `nc_html_link.parse_pg_pi` 폴백(일부 §6에서 다수 PI 미그룹핑 → 렌더 누락 해소).
+- **`policy-render-deliver`(0.3.0)·`policy-workflow-orchestration`(0.3.0)** — 5원칙 완료 게이트·구간 분리·`build_deliverable`/`run_acceptance` 배선. 완료 정의 = 게이트 DONE.
+
+### 효과성(9쌍)
+- **DONE 3**(결제·나의데이터통화·전시관리) · **BLOCKED 6**(정책상세/usecase_id 저작·원천 §4↔§5 불일치·미지원 포맷=전부 정당한 사람결정) · **FAIL 0**.
+
 ## [0.4.3] — 2026-06-30
 
 사람 결정·수정 안내 게이트 (효과성 테스트 백로그 D + 사람-핸드오프 보강).
