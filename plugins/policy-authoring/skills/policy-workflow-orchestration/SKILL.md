@@ -1,7 +1,7 @@
 ---
 name: policy-workflow-orchestration
 description: Top-level conductor that routes a policy/requirements 작성 단위(unit) through the full phase sequence, the "편집 1건 루프" discipline, and the 5-principle completion gate (run_acceptance → DONE/BLOCKED/FAIL). Use when the user asks where to start, what comes next, how the pieces fit, when a unit is "done", or to drive a unit end-to-end — "작성 단위 시작", "전체 흐름", "다음 단계", "phase 순서", "워크플로우", "완료 기준", "5원칙", "run_acceptance", "어느 스킬 써야 해", "오케스트레이션", "end to end", "편집 루프", "선별 커밋", "NC 업로드 준비", "faq 착수", "store 착수". Prefer this when the question is sequencing/which-skill-when across the whole pipeline, not one phase's 내용.
-version: 0.3.0
+version: 0.3.1
 ---
 
 # 정책서 워크플로우 오케스트레이션 (Policy Workflow Orchestration)
@@ -38,9 +38,10 @@ version: 0.3.0
 
 ## 완료 정의 — 5원칙 게이트 (플러그인이 스스로 검수·확정)
 작성 단위의 **완료는 5원칙 통합 게이트 `run_acceptance`(진입점 `build_deliverable`)가 판정**한다. 육안·부분 grep은 보조일 뿐 계약이 아니다.
-- **R1 골든 스타일**(§5~§6 골든 렌더) · **R2 입력 게이트**(`validate_spec_input` errors=0) · **R3 원천 보존**(원천 HTML 정본 대비 무손실·무단발산 0·헤드 §0~§4 완전보존) · **R4 완료 정합**(JSON↔HTML) · **R5 도메인코드 현행화**(권위표 `policy domain code.xlsx`→ 전 ID 세그먼트 relabel).
-- **3-상태**: **DONE**(5원칙 PASS) / **BLOCKED**(결함 없으나 사람결정 대기 — 미지원 포맷·usecase_id·정책상세 저작·원천 §4↔§5 불일치·발산 승인/제외·R5 target 미매핑) / **FAIL**(배포물 원칙 RED = 자동 수정 대상).
-- **BLOCKED은 실패가 아니라 사람 결정 요청** — `policy-html-json-check`/`decision_guide`로 처리 후 재검수. **원칙·목표가 바뀌면 이 게이트(오라클·도구)에 반드시 반영**한다(플러그인이 산출물).
+- **R1 골든 스타일**(§5~§6 골든 렌더) · **R2 입력 게이트**(번들 `validate_nc_input` errors=0, 경로 없이 기본 실행) · **R3 원천 보존**(원천 HTML 정본 대비 무손실·무단발산 0·헤드 §0~§4 완전보존) · **R4 완료 정합**(JSON↔HTML) · **R5 도메인코드 현행화**(권위표 `domain_codes.md`→ 전 ID 세그먼트 relabel; 미등록 도메인은 `add_domain`으로 대화형 등록).
+- **3-상태**: **DONE**(5원칙 PASS) / **BLOCKED**(결함 없으나 사람결정 대기 — 미지원 포맷·usecase_id·정책상세 저작·원천 §4↔§5 불일치·발산 승인/제외·R5 도메인 미등록→대화형 등록) / **FAIL**(배포물 원칙 RED = 자동 수정 대상).
+- **최종 산출물 = 5원칙 통과 HTML+JSON 한 쌍**(`build_deliverable` out-dir의 `_deliverable.html` + `_spec.json`).
+- **BLOCKED은 실패가 아니라 사람 결정 요청** — `policy-html-json-check`/`decision_guide`로 처리 후 재검수. **원칙·목표가 바뀌면 이 게이트(오라클·도구)에 반드시 반영**한다(플러그인이 산출물). 플러그인 도구·오라클을 수정하면 `validate_plugin.py --check-oracles`로 5원칙 오라클 자기검증(`tests/`)을 통과해야 릴리스한다.
 
 ## 편집 1건 루프 (모든 내용 변경 — 절대 규율)
 내용을 한 건 바꿀 때마다 아래를 **순서대로** 돈다. 어긋나면 폐기하고 직전 커밋으로 복귀.
@@ -51,7 +52,7 @@ tools/overrides/<unit>.py 편집(PI 본문·applies_to·rule_type·decision_spec
 → python3 tools/audit_id_integrity.py --config=policy_config.json --unit=<unit>   # STRUCTURAL 0 (exit 0) 필수
 → python3 tools/render_preview.py      --config=policy_config.json --unit=<unit>
 → python3 tools/splice_nc_html.py      --unit=<unit> --base=<원천 HTML>           # 배포본만(§5·6)
-→ python3 tools/run_acceptance.py      --source=<원천> --spec=<spec> --deliverable=<배포> [--gate=..]  # 5원칙 DONE
+→ python3 tools/run_acceptance.py      --source=<원천> --spec=<spec> --deliverable=<배포>  # 5원칙 DONE(R2 게이트 기본 번들)
 → 미리보기·spliced 육안 확인 → 선별 커밋
 ```
 > 원천 HTML 기반 신규 배포는 위 3개(render→splice→accept)를 묶은 **`build_deliverable.py`** 한 번으로 대체 가능.

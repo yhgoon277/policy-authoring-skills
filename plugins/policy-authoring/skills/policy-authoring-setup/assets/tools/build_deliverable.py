@@ -61,7 +61,7 @@ def _resolve_target(spec, target_code):
                 seg = dcn.seg_of(x.get("id", ""))
                 if seg:
                     try:
-                        t = dcm.code_for_current(seg)
+                        t = dcm.resolve_target(seg)
                     except Exception:  # noqa: BLE001
                         t = None
                     if t:
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     ap.add_argument("--source", required=True, help="원천(진실원천) HTML")
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--target-code", default=None, help="R5 목표 도메인코드(미지정 시 자동 유도)")
-    ap.add_argument("--gate", default=None, help="validate_spec_input.py 경로(R2)")
+    ap.add_argument("--gate", default=None, help="R2 게이트 경로(미지정 시 번들 validate_nc_input.py 자동 사용)")
     ap.add_argument("--approved", default=None, help="승인된 발산 id JSON(list) 경로")
     ap.add_argument("--format", default="text", choices=("text", "json"))
     a = ap.parse_args()

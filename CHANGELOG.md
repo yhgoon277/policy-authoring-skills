@@ -2,6 +2,22 @@
 
 모든 주요 변경을 기록한다. 버전은 [SemVer](https://semver.org/lang/ko/)를 따른다.
 
+## [0.5.1] — 2026-07-01
+
+5원칙 **실질화·자기검증** 하드닝 — 감사로 드러난 세 구멍(R2 미배선·R5 취약/비가독·오라클 자기검증 0)을 메워 "플러그인이 5원칙을 자동 테스트로 검수"를 실제로 embody.
+
+### Added
+- **`tests/`(오라클 자기검증 스위트)** — stdlib unittest 37케이스: `compare_fidelity`(R1/R3 손실·발산·헤드보존·골든스타일)·`completion_audit`(R4)·`domain_code`(R5)·`run_acceptance`(3-상태 종합)·통합(실 결제쌍 end-to-end, 데이터 부재 시 skip). `validate_plugin.py --check-oracles`가 오라클 도구 존재 + 이 스위트 통과를 **릴리스 게이트**로 강제(패키징만 검사하던 한계 해소).
+- **`assets/tools/domain_codes.md`(R5 권위표 SSOT)** — 도메인명→코드 매핑을 AI/사람이 직접 읽고 편집하는 Markdown 표로 외재화(엑셀 불필요). `domain_code_map`이 런타임 로드(부재 시 baked 폴백). 신규 `resolve_target`(현행/권위 양방향)·`is_authoritative`·`suggest_code`·`add_domain`(대화형 등록).
+
+### Changed
+- **R2 게이트 기본 실질화** — `run_acceptance._run_gate`가 경로 미지정 시 **번들 `validate_nc_input.py`(디자인팀 게이트 무수정 이식본)를 기본 실행** → R2 항상 PASS/FAIL(이전 NA→BLOCKED 오분류 소멸). `--gate`는 커스텀 override 유지, 게이트 로직 무수정.
+- **R5 resolve 보강** — `run_acceptance`·`build_deliverable`의 target 유도를 `domain_code_map.resolve_target`로 통일: 브릿지 별칭(AIS→AIA)뿐 아니라 **이미 현행화된 코드(INFO 등)도 인식** → 불필요한 BLOCKED 제거. 미등록 도메인은 대화형 등록으로 해소.
+- **스킬 배선** — `policy-render-deliver`(0.3.1) 'R2 기본 번들'·'R5 미등록 대화형 등록' 절 + 최종 산출물=5원칙 통과 HTML+JSON 한 쌍 명시. `policy-workflow-orchestration`(0.3.1) 완료 정의 갱신 + `--check-oracles` 릴리스 게이트.
+
+### Notes
+- `domain_codes.md`는 `tools/`에 co-locate(런타임 로드) → 번들 zip 자동 포함. `tests/`는 repo 루트(dist 미포함=dev-time). 전부 stdlib(YAML 대신 md 테이블 채택 이유).
+
 ## [0.5.0] — 2026-07-01
 
 **5원칙 완료 게이트를 플러그인에 embody** — 저작 결과를 R1~R5로 자동 검수·완료 확정. 효과성 테스트(NC 1차 정책서 9쌍, 청구및수납 제외) 기반 TDD.

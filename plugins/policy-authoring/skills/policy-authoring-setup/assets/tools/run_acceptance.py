@@ -6,7 +6,7 @@
 
 원칙 → 오라클:
   R1 골든 스타일   compare_fidelity의 principle==R1 (STYLE_*·FN_NO_POLICY)   [§5~§6 본문]
-  R2 입력 게이트   외부 validate_spec_input.py 실행 → errors==0              [spec JSON]
+  R2 입력 게이트   번들 validate_nc_input.py(디자인팀 게이트 무수정 이식본) → errors==0  [spec JSON]
   R3 원천 보존     compare_fidelity의 principle==R3 (손실·헤드보존·발산)      [§0~§4 헤드+본문 매핑]
   R4 완료 정합     completion_audit (JSON↔HTML)
   R5 도메인코드    domain_code_normalize.check_r5(spec, target)
@@ -57,18 +57,21 @@ def _resolve_target(spec, target_code):
     if dcm is not None:
         cur = _seg_of_spec(spec)
         try:
-            t = dcm.code_for_current(cur) if cur else None
+            t = dcm.resolve_target(cur) if cur else ""
         except Exception:  # noqa: BLE001
-            t = None
+            t = ""
         if t:
-            return t, f"auto({cur}→{t})"
+            how = "already-current" if t == cur else "auto"
+            return t, f"{how}({cur}→{t})"
     return None, "unresolved"
 
 
 def _run_gate(gate_path, spec_path):
-    """외부 입력 게이트 실행 → (verdict, errors, detail). 게이트 없으면 NA."""
-    if not gate_path or not os.path.exists(gate_path):
-        return "NA", None, "게이트 파일 없음(policy_config.json spec_input_gate 또는 --gate 지정)"
+    """입력 게이트 실행 → (verdict, errors, detail). 미지정 시 번들 validate_nc_input.py 기본 사용."""
+    if not gate_path:
+        gate_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "validate_nc_input.py")
+    if not os.path.exists(gate_path):
+        return "NA", None, "게이트 파일 없음(번들 validate_nc_input.py 부재 — 재설치 필요)"
     try:
         p = subprocess.run([sys.executable, gate_path, spec_path],
                            capture_output=True, text=True, timeout=120)
@@ -168,9 +171,11 @@ def run(source_html, spec, deliverable_html, target_code=None, gate=None, approv
         principles["R5"] = {"verdict": chk["verdict"], "target": target, "resolved": how,
                             "bad_ids": chk["bad_ids"][:5], "business_code_ok": chk["business_code_ok"]}
     else:
-        principles["R5"] = {"verdict": "NA", "note": "target 코드 미결(domain_code_map 미매핑)"}
+        cur_seg = _seg_of_spec(spec_obj) or "?"
+        principles["R5"] = {"verdict": "NA", "note": f"target 코드 미결(domain_codes.md에 '{cur_seg}' 미등록)"}
         decisions.append({"principle": "R5", "kind": "target_unresolved",
-                          "detail": "도메인 코드 target을 확정할 수 없음 → 사람 결정(권위표 매핑)"})
+                          "detail": (f"도메인 코드 target 미결(현재 세그='{cur_seg}') → domain_codes.md에 "
+                                     "대화형 등록(domain_code_map.add_domain) 또는 --target-code 지정")})
 
     # 종합. FAIL은 배포물 원칙(R1/R3/R4/R5)만 — R2(설계 게이트)는 spec 저작 결정으로 BLOCKED.
     # 미지원 포맷은 어떤 원칙 FAIL이어도 BLOCKED(범위 밖 — 포맷 파서·수동 매핑이 선결).
