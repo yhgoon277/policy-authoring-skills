@@ -181,3 +181,89 @@ codex plugin marketplace remove policy-authoring-skills
 - **audit STRUCTURAL>0**: 거의 항상 롤업 재계산 누락 또는 참조 오타 → `policy-integrity-audit` 스킬로 진단(보통 build의 rebuild_rollups가 정정).
 - **카운트가 매 빌드 +1로 샘**: baseline을 다시 빌드 입력으로 쓰는 구성에서 옛/새 id 불일치 PI가 생기는 경우 — `pr_pi_remove`/정리로 끝단 차단.
 - **본문에 레거시 용어 잔존**: `term_replacements` 확인. 근거(`source_note` 등)는 의도적으로 치환 제외(원형 보존).
+
+---
+
+## 8. 설치 → 첫 세션 시작 (팀원용 복사 프롬프트)
+
+플러그인을 설치한 뒤, 자기 정책서 프로젝트의 **첫 세션 첫 메시지**로 아래 프롬프트를 그대로 붙여넣으면 됩니다.
+
+### 8-1. 설치 프롬프트 (환경 택1)
+
+> 마켓플레이스 이름은 도구별로 다릅니다(정상): **Claude=`mypart-skills` / Codex=`policy-authoring-skills`**. autoUpdate는 **Claude 전용**(Codex는 수동 `marketplace upgrade`). 둘 다 `release` 핀 사용.
+
+**Codex**
+```
+Codex에서 policy-authoring 플러그인을 설치해줘.
+1) codex plugin marketplace add yhgoon277/policy-authoring-skills --ref release
+   (release=검증 커밋만. Codex엔 autoUpdate 없음 → 갱신은 `codex plugin marketplace upgrade policy-authoring-skills` 수동.)
+2) codex plugin marketplace list 로 등록 이름 확인 — 이 repo는 Codex에서 policy-authoring-skills로 등록됨(Claude의 mypart-skills와 다른 게 정상).
+3) codex plugin add policy-authoring@policy-authoring-skills
+4) codex plugin list 에 installed·enabled + 새 대화에 policy-* 10개 확인. 이름이 mypart-skills가 아니어도 정상이니 억지로 맞추지 마.
+```
+
+**Claude Code**
+```
+Claude Code에서 policy-authoring 플러그인을 설치해줘.
+1) /plugin marketplace add yhgoon277/policy-authoring-skills@release   (release 핀 + autoUpdate)
+2) /plugin install policy-authoring@mypart-skills
+3) /plugin list 에 policy-authoring@mypart-skills : enabled + 새 세션에 policy-* 10개 확인.
+데스크톱 GUI: 마켓플레이스 추가 → 출처 yhgoon277/policy-authoring-skills · Git ref release · Sparse 비움 → 추가 후 policy-authoring 설치.
+```
+
+### 8-2. 첫 세션 프롬프트 (그대로 복사)
+
+```
+# 목표
+policy-authoring 플러그인으로 정책서 한 건을 개선해서, 아래 5원칙을 모두 통과한 새 HTML + JSON 한 쌍을 만든다.
+→ 최종 산출물 = 5원칙을 전부 만족하는 정책서 HTML 1개 + spec JSON 1개(한 쌍). 이 한 쌍이 새로 나와야 "완료"다.
+
+# 5원칙 (= 완료 기준)
+- R1 · 골든 샘플 스타일 — §5 기능·§6 정책만 골든 스타일로 렌더한다.
+  단, §0 문서 히스토리 ~ §4 프로세스 정의(개요·주요 용어·유즈케이스/상태전이 다이어그램·프로세스 케이스표 포함)는
+  "원천 완전보존" 구간이라 골든 스타일 적용 대상이 아니다(원천 HTML 그대로 유지).
+- R2 · 입력 게이트 통과 — 디자인팀 입력 게이트(validate_spec_input) errors = 0.
+- R3 · 원천 보존 — 진실원천(기존 HTML 등)의 매핑·내용을 내 승인 없이 바꾸지 않는다(누락·발산·날조 금지).
+- R4 · 최종 정합 — 산출된 JSON ↔ HTML이 서로 일치한다.
+- R5 · 도메인 코드 현행화 — 권위표 기준으로 전 ID의 도메인 코드 세그먼트를 현행화한다.
+
+# 진행 방식
+1. 활용안 제안 (먼저)
+   이번 작업에 플러그인을 어떻게 쓸지 제안한다. 특히 5원칙 각각을 어떤 스킬로 달성할지 매핑해 제시하고 내 확인을 받는다.
+   (정해진 절차를 무작정 밀지 말고, 이 작업에 맞게 제안.)
+
+2. 상황 인터뷰
+   한 번에 하나씩 질문해 아래를 함께 확정한다(내가 아직 다 모를 수 있음):
+   - 작업 대상(어떤 정책서/모듈)
+   - 현재 상태: 신규 작성 / 기존 정책서 수정 / 외부·변환 HTML 수입
+   - 진실원천: 기존 HTML인지 spec JSON인지 + 파일 경로
+   - 프로젝트 폴더 경로, 도메인 코드(모르면 권위표로 확인·제안)
+   - 지금 겪는 문제 / 이루려는 목표
+
+3. 청사진 → 승인
+   파악되면 범위·계획·완료정의(= 위 5원칙 통과 HTML+JSON 한 쌍)를 제시하고 승인받는다.
+   추측하지 말고 모호하면 계속 질문. 각 단계에서 무엇을·왜 하는지 짧게 설명.
+
+4. 단계별 실행
+   승인 후 스텝바이스텝으로 진행하고 매 단계 산출물을 보여준다.
+   핵심(5원칙 달성 + 최종 한 쌍 산출)에 집중하고 부차적인 데 시간 쓰지 않는다.
+
+5. 완료 게이트로 확정
+   run_acceptance / build_deliverable로 판정한다:
+   - DONE → 최종 HTML + JSON 한 쌍의 파일 경로를 알려주며 완료
+   - BLOCKED → 내가 결정할 항목만 정리해 질문
+   - FAIL → 원인 수정
+
+6. R3 사전 확인 (절대 규칙)
+   원천을 바꿔야 하는 판단(매핑 변경·항목 추가/제외·코드 relabel)은 반드시 나에게 먼저 확인받는다.
+
+# 시작
+먼저 상황을 물어보고, 이 작업에 맞는 5원칙별 스킬 활용안을 제안하는 것부터 시작해.
+```
+
+### 8-3. 전제 / 주의 — 완료가 BLOCKED로 떠도 정상(오류 아님)
+플러그인은 판단이 필요한 지점을 **FAIL(결함)이 아니라 BLOCKED(사람 결정 요청)**로 표시합니다. 아래 경우가 대표적입니다.
+- **R2 입력 게이트**: 디자인팀 `validate_spec_input.py`는 플러그인에 포함돼 있지 않습니다(디자인팀 산출물). 파일이 있으면 첫 세션에서 그 경로를 알려주세요. 없으면 R2는 측정 불가(NA)로 **BLOCKED**가 뜹니다(크래시 아님).
+- **R5 도메인 코드**: 권위표(주요 도메인)는 플러그인에 내장되어 오프라인 동작합니다. 등록되지 않은 새 도메인이면 R5가 **BLOCKED**로 뜨니, 그때 코드를 함께 정하면 됩니다.
+- **도구 위치**: 새 프로젝트는 `/policy-authoring-setup`이 build/audit/render/파이프라인 도구를 프로젝트로 복사하도록 안내합니다. 기존 세팅 프로젝트는 그대로 진행됩니다.
+- **정리**: 위 프롬프트는 그대로 복사·붙여넣기 해도 **깨지지 않습니다.** BLOCKED가 뜨면 플러그인이 물어보는 항목만 확인·결정하면 다시 DONE으로 진행합니다.
