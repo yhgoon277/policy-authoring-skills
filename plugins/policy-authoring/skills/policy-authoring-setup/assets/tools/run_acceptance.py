@@ -11,6 +11,8 @@
   R4 완료 정합     completion_audit (JSON↔HTML)
   R5 도메인코드    domain_code_normalize.check_r5(spec, target)
 
+모드: preserve(기본)=배포물이 원본 보존(R1 WAIVED 기록, R3=FULL_PRESERVED 전문서) / golden=§5~§6 골든 렌더(R1 측정). 어느 모드든 R2·R4·R5는 동일 측정.
+
 3-상태 종합:
   DONE    측정된 원칙 전부 PASS + 미해결 사람결정 0
   BLOCKED 결함(FAIL)은 없으나 측정 불가/결정 대기(미지원 포맷·게이트 부재·target 미매핑·MED 완료게이트)
@@ -101,7 +103,8 @@ def _load(spec):
     return spec
 
 
-def run(source_html, spec, deliverable_html, target_code=None, gate=None, approved=None):
+def run(source_html, spec, deliverable_html, target_code=None, gate=None, approved=None,
+        mode="preserve"):
     spec_obj = _load(spec)
     spec_path = spec if isinstance(spec, str) else None
     principles, decisions = {}, []
@@ -118,21 +121,26 @@ def run(source_html, spec, deliverable_html, target_code=None, gate=None, approv
 
     # R1 + R3 : compare_fidelity (principle 태그로 버킷팅)
     if measurable:
-        cmp = cf.compare(source_html, deliverable_html, target_code=target, approved=approved)
-        r1 = [f for f in cmp["findings"] if f.get("principle") == "R1"]
+        cmp = cf.compare(source_html, deliverable_html, target_code=target, approved=approved, mode=mode)
         r3 = [f for f in cmp["findings"] if f.get("principle") == "R3"]
-        r1_high = [f for f in r1 if f["severity"] == "HIGH"]
-        r1_med = [f for f in r1 if f["severity"] == "MED"]
-        # R3 손실(FN_DROPPED·HEAD 등)=자동수정 대상 결함→FAIL. R3 발산(*_ADDED)=입력전용
-        # 승인/제외 사람결정→decisions(BLOCKED). (fabrication 아님: 원천 부재 콘텐츠 유입)
         r3_div = [f for f in r3 if f["invariant"].endswith("_ADDED")]
         r3_loss = [f for f in r3 if not f["invariant"].endswith("_ADDED")]
-        principles["R1"] = {"verdict": "FAIL" if r1_high else "PASS",
-                            "findings": [_slim(f) for f in r1]}
+        if mode == "preserve":
+            # 보존 모드: R1(골든 스타일)은 명시 WAIVED — 사용자 결정으로 §5~§6 골든 비적용(몰래 PASS 아님)
+            principles["R1"] = {"verdict": "WAIVED", "findings": [],
+                                "note": "보존 모드 — §5~§6 골든 스타일 비적용(원본 보존, 사용자 결정)"}
+        else:
+            r1 = [f for f in cmp["findings"] if f.get("principle") == "R1"]
+            r1_high = [f for f in r1 if f["severity"] == "HIGH"]
+            r1_med = [f for f in r1 if f["severity"] == "MED"]
+            principles["R1"] = {"verdict": "FAIL" if r1_high else "PASS",
+                                "findings": [_slim(f) for f in r1]}
+            for f in r1_med:  # 완료게이트(FN_NO_POLICY 등) = 저작 필요 결정
+                decisions.append({"principle": "R1", "kind": "authoring_needed", "detail": f["detail"]})
         principles["R3"] = {"verdict": "FAIL" if any(f["severity"] == "HIGH" for f in r3_loss) else "PASS",
                             "findings": [_slim(f) for f in r3]}
-        for f in r1_med:  # 완료게이트(FN_NO_POLICY 등) = 저작 필요 결정
-            decisions.append({"principle": "R1", "kind": "authoring_needed", "detail": f["detail"]})
+        # R3 손실(FN_DROPPED·HEAD 등)=자동수정 대상 결함→FAIL. R3 발산(*_ADDED)=입력전용
+        # 승인/제외 사람결정→decisions(BLOCKED). (fabrication 아님: 원천 부재 콘텐츠 유입)
         for f in r3_div:  # 원천 부재 엔티티 유입 = 승인 또는 제외 사람결정
             decisions.append({"principle": "R3", "kind": "source_divergence",
                               "detail": f"{f['invariant']}: {f['detail']} (승인 시 approved 등재, 아니면 제외)"})
@@ -140,7 +148,9 @@ def run(source_html, spec, deliverable_html, target_code=None, gate=None, approv
             if f["severity"] == "MED":
                 decisions.append({"principle": "R3", "kind": "source_inconsistency", "detail": f["detail"]})
     else:
-        principles["R1"] = {"verdict": "NA", "findings": [], "note": "미지원 포맷(파싱 불가)"}
+        principles["R1"] = ({"verdict": "WAIVED", "findings": [],
+                             "note": "보존 모드 — 골든 스타일 비적용"} if mode == "preserve"
+                            else {"verdict": "NA", "findings": [], "note": "미지원 포맷(파싱 불가)"})
         principles["R3"] = {"verdict": "NA", "findings": [], "note": "미지원 포맷(파싱 불가)"}
         decisions.append({"principle": "R1/R3", "kind": "unsupported_format",
                           "detail": "원천 HTML이 ID 스킴 없는 포맷 → 자동 정합 불가(수동 매핑 필요)"})
@@ -212,13 +222,15 @@ if __name__ == "__main__":
     ap.add_argument("--target-code", default=None)
     ap.add_argument("--gate", default=None)
     ap.add_argument("--approved", default=None, help="승인된 발산 id JSON(list) 경로")
+    ap.add_argument("--mode", default="preserve", choices=("preserve", "golden"),
+                    help="preserve(기본)=원본 보존 배포물(R1 WAIVED) / golden=§5~§6 골든 렌더(R1 측정)")
     ap.add_argument("--format", default="text", choices=("text", "json"))
     a = ap.parse_args()
     approved = None
     if a.approved and os.path.exists(a.approved):
         with open(a.approved, encoding="utf-8") as f:
             approved = json.load(f)
-    r = run(a.source, a.spec, a.deliverable, target_code=a.target_code, gate=a.gate, approved=approved)
+    r = run(a.source, a.spec, a.deliverable, target_code=a.target_code, gate=a.gate, approved=approved, mode=a.mode)
     if a.format == "json":
         print(json.dumps(r, ensure_ascii=False, indent=2))
     else:
