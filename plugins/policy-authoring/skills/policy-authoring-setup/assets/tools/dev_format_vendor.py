@@ -167,6 +167,9 @@ class PolicyHTMLParser(HTMLParser):
         self._pi_li_buf: list[str] = []
         self._pi_family: str = ""        # "pi-detail" | "item" — 규칙 캡처 경계 결정
         self._in_rule_list: bool = False  # <ul class="pi-detail-list"> 내부 여부
+        # L1-rich: 간소화 policy-item-line span 불릿 캡처(별도 버퍼; content 축적 무손상)
+        self._in_pil_span: bool = False   # <span class="policy-item-line"> 처리 중
+        self._pil_buf: list[str] = []     # span 내 텍스트 병행 수집
         self._detail_block_depth: int = 0  # pi-detail-block div 깊이 — 닫힐 때 항목 확정(경계)
         # L1-rich: 핵심질문(pi-core-question) — 질문 + 답변 bullets
         self._in_core_q_p: bool = False
@@ -277,6 +280,8 @@ class PolicyHTMLParser(HTMLParser):
                 self._in_pi_li = False
                 self._pi_family = "item"
                 self._in_rule_list = False
+                self._in_pil_span = False
+                self._pil_buf = []
             # 제목 div 변형: policy-item-title(AI검색 등) / pi-title(상품상세 v0.30+)
             elif ("policy-item-title" in classes or "pi-title" in classes) and self._in_policy_item:
                 # 첫 제목 진입에서만 _buf를 연다. 이중 중첩 제목은 nest만 올려, 바깥
@@ -315,6 +320,11 @@ class PolicyHTMLParser(HTMLParser):
             # 본문 리스트 항목 — 규칙으로 별도 캡처(content 누적과 병행).
             self._in_pi_li = True
             self._pi_li_buf = []
+        elif tag == "span" and "policy-item-line" in classes and self._in_policy_item:
+            # 간소화 변형: "- …" 불릿이 <li>가 아닌 <span class="policy-item-line">로 표현됨.
+            # 별도 버퍼에 텍스트를 병행 수집하고 </span>에서 rules에 추가(content 축적 무손상).
+            self._in_pil_span = True
+            self._pil_buf = []
         elif tag == "br":
             if self._buf is not None:
                 self._buf.append("\n")
@@ -336,6 +346,16 @@ class PolicyHTMLParser(HTMLParser):
                 (self._pi_core_answers if self._in_core_q_answers else self._pi_rules).append(text)
             self._in_pi_li = False
             self._pi_li_buf = []
+            return
+        if tag == "span" and self._in_pil_span:
+            # 간소화 policy-item-line 스팬 닫힘 — 버퍼 텍스트를 확정해 rules에 추가.
+            text = self._normalize("".join(self._pil_buf))
+            if text.startswith("-"):
+                text = text[1:].strip()
+            if text:
+                self._pi_rules.append(text)
+            self._in_pil_span = False
+            self._pil_buf = []
             return
         if tag == "ul":
             if self._in_core_q_answers:
@@ -431,9 +451,16 @@ class PolicyHTMLParser(HTMLParser):
     def handle_data(self, data: str) -> None:
         if self._in_pi_li:
             self._pi_li_buf.append(data)
+        if self._in_pil_span:
+            # 간소화 스팬 — 별도 버퍼에 병행 수집(rules 추출용). content 축적とは독립.
+            self._pil_buf.append(data)
         if self._in_policy_item_content:
             # 본문 연속 누적 — _buf와 무관하게 모은다. 중첩 표 셀의 <td>/<th>가 _buf를
             # 리셋해도(RC-A) wrapper 본문이 사라지지 않는다.
+            self._pi_content_acc.append(data)
+        elif self._in_pil_span and self._in_policy_item:
+            # policy-item-content div 없이 policy-item-line span이 직접 policy-item 안에
+            # 있는 경우(간소화 fixture 변형): content 누적도 _pi_content_acc에 쌓아 둔다.
             self._pi_content_acc.append(data)
         if self._buf is not None:
             self._buf.append(data)
@@ -467,6 +494,12 @@ class PolicyHTMLParser(HTMLParser):
 
     def _finalize_policy_item(self) -> None:
         title_text = self._normalize("".join(self._pi_title_buf))
+        # 정상 경로: policy-item-content div 닫힘 시 _pi_content_acc → _pi_content_buf 이전.
+        # 간소화 변형: content div 없이 policy-item-line span이 직접 policy-item에 있으면
+        # _pi_content_buf는 비어 있고 _pi_content_acc에만 텍스트가 있으므로 fallback 사용.
+        if not self._pi_content_buf and self._pi_content_acc:
+            self._pi_content_buf = list(self._pi_content_acc)
+            self._pi_content_acc = []
         content_text = self._normalize("".join(self._pi_content_buf))
         # Cosmetic cleanup — HTML 원본의 <li> 또는 "- " 머리표가 그대로 텍스트로
         # 들어와 content 가독성을 해치는 경우를 정리한다.

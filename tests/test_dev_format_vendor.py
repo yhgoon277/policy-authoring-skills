@@ -66,6 +66,13 @@ class DetailTableCapture(unittest.TestCase):
         self.assertEqual(len(it.detail_tables or []), 1)
         self.assertEqual(it.detail_tables[0].get("headers"), ["유형", "기준"])
 
+    def test_policy_item_line_bullets_become_rules(self):
+        _, items, _ = dfv.parse_html(Path(self.src))
+        it = next(i for i in items if getattr(i, "pi_id", "") == "PI-EVT-PROG-001-01")
+        self.assertIn("유형은 참여형과 비참여형으로 나눈다.", " ".join(it.rules or []))
+        # content(전문)도 여전히 라인을 포함(축적 무손상 — rules는 content의 부분집합)
+        self.assertIn("유형은 참여형과 비참여형으로 나눈다", it.content or "")
+
 
 @unittest.skipUnless(os.path.exists(GOLDEN_HTML), "골든 샘플 없음")
 class GoldenRegression(unittest.TestCase):
