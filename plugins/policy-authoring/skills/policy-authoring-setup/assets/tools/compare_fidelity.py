@@ -120,9 +120,11 @@ def compare(orig_html, gen_html, target_code=None, approved=None, mode="golden")
     # 원천 내부 불일치: §6 정책 목록 표 vs 정책 상세 구조의 PG 구성 상이 — 사람 확인(MED, 단일 집계)
     def _nrm(s):
         return re.sub(r"\s+", "", s or "").lower()
+    def _nset(xs):
+        return {_nrm(x) for x in xs if _nrm(x)}
     ln, dn = o.get("pg_list_names") or {}, o.get("pg_detail_names") or {}
     mism = [pg for pg, names in ln.items()
-            if pg in dn and {_nrm(x) for x in names} != {_nrm(x) for x in dn[pg]}]
+            if pg in dn and _nset(names) and _nset(dn[pg]) and _nset(names) != _nset(dn[pg])]
     if mism:
         add("PG_LIST_DETAIL_MISMATCH", "MED", "policy_list_vs_detail",
             f"정책 목록표와 정책 상세의 PG 구성 불일치 {len(mism)}개(원천 내부 불일치 — 사람 확인): {mism[:5]}")

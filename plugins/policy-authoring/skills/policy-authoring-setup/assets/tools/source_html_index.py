@@ -178,7 +178,9 @@ def build_index(path):
     pg_pi = nc_html_link.parse_pg_pi(html)
     idx["pg_to_pis"] = {pg: [x["id"] for x in lst] for pg, lst in pg_pi.items()}
     idx["pg_list_names"] = _pg_list_names(html)
-    idx["pg_detail_names"] = {pg: [x.get("name", "") for x in lst] for pg, lst in pg_pi.items()}
+    # 빈 name(파서가 명칭을 못 읽은 항목)은 제외 — 교차검증 가짜 불일치 방지
+    idx["pg_detail_names"] = {pg: [n for n in (x.get("name", "") for x in lst) if n.strip()]
+                              for pg, lst in pg_pi.items()}
     return idx
 
 
