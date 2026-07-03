@@ -144,6 +144,10 @@ class PolicyHTMLParser(HTMLParser):
         # (한 wrapper 안에 형제 PI가 미종료 div로 끼워진 AI검색 RES-106 등)에서 항목이
         # 통째로 합쳐지지 않게 한다.
         self._pi_title_nest: int = 0
+        # 본문 div 중첩 깊이: policy-item-content 안의 내부 div(policy-stmt·pdt-caption 등)가
+        # 닫힐 때 content 자체가 조기 종료되는 것을 막는다. content는 nest가 0으로 돌아올
+        # 때(=policy-item-content 자신의 </div>)만 닫힌다.
+        self._pi_content_nest: int = 0
         # 본문 연속 누적기: 중첩 <table> 셀의 <td>/<th>가 _buf를 리셋해도(RC-A) 본문이
         # 사라지지 않도록 _in_policy_item_content 동안 모든 텍스트를 별도로 모은다.
         self._pi_content_acc: list[str] = []
@@ -205,6 +209,7 @@ class PolicyHTMLParser(HTMLParser):
             self._in_policy_item_title = False
             self._in_policy_item_content = False
             self._pi_title_nest = 0
+            self._pi_content_nest = 0
         # 독립(미래핑) 제목 변형 → 본문-경계 머신으로 처리.
         #  - pi-detail-title(주문계약): 항상
         #  - policy-item-title / pi-title: div.policy-item 래퍼 밖일 때만(래퍼 안은 기존 경로)
@@ -240,6 +245,7 @@ class PolicyHTMLParser(HTMLParser):
             self._in_policy_item_content = False
             # 깨진/미종료 wrapper가 다음 섹션으로 상태를 흘리지 않도록 확실히 리셋한다.
             self._pi_title_nest = 0
+            self._pi_content_nest = 0
             self._pi_content_acc = []
             if tag == "h4":
                 self._h4_id = attrs_d.get("id") or ""
@@ -263,6 +269,7 @@ class PolicyHTMLParser(HTMLParser):
                 self._finalize_pi_detail_item()
                 self._in_policy_item = True
                 self._pi_title_nest = 0
+                self._pi_content_nest = 0
                 self._pi_title_buf = []
                 self._pi_content_buf = []
                 self._pi_content_acc = []
@@ -288,8 +295,13 @@ class PolicyHTMLParser(HTMLParser):
                     self._pi_title_nest = 0
                     self._pi_title_buf = list(self._buf or [])
                 self._in_policy_item_content = True
+                self._pi_content_nest = 0  # 본문 div 자신은 nest 0; 내부 div가 열릴 때 +1
                 self._buf = []
                 self._pi_content_acc = []
+            # 본문 내부 div(policy-stmt·pdt-caption 등) — 중첩 깊이를 올려 본문이
+            # 조기 종료되지 않게 한다.
+            elif self._in_policy_item_content:
+                self._pi_content_nest += 1
         elif tag == "p" and "pi-core-question" in classes and self._in_body_capture():
             # 핵심질문 문단 — 질문 텍스트를 별도 캡처.
             self._in_core_q_p = True
@@ -396,17 +408,25 @@ class PolicyHTMLParser(HTMLParser):
                     self._pi_title_buf = list(self._buf or [])
                     self._buf = None
             elif self._in_policy_item_content:
-                self._in_policy_item_content = False
-                # 연속 누적기를 본문으로 쓴다 — 중첩 표가 _buf를 비워도 본문 보존(RC-A).
-                self._pi_content_buf = list(self._pi_content_acc)
-                self._pi_content_acc = []
-                self._buf = None
+                # 본문 내부 div가 닫히면 중첩 깊이를 줄인다. nest > 0이면 내부 div이므로
+                # 깊이만 줄이고 본문 상태를 유지한다(policy-stmt·pdt-caption 등 조기 종료 차단).
+                # nest == 0이 됐을 때만 policy-item-content 자신의 </div>이므로 본문을 확정한다.
+                if self._pi_content_nest > 0:
+                    self._pi_content_nest -= 1
+                else:
+                    self._in_policy_item_content = False
+                    self._pi_content_nest = 0
+                    # 연속 누적기를 본문으로 쓴다 — 중첩 표가 _buf를 비워도 본문 보존(RC-A).
+                    self._pi_content_buf = list(self._pi_content_acc)
+                    self._pi_content_acc = []
+                    self._buf = None
             elif self._in_policy_item:
                 # closing the policy-item wrapper — finalize an item. 깨진 중첩에서는
                 # 제목/본문이 아닌 첫 </div>가 항목 경계로 동작한다(기존 동작 유지).
                 self._finalize_policy_item()
                 self._in_policy_item = False
                 self._pi_title_nest = 0
+                self._pi_content_nest = 0
 
     def handle_data(self, data: str) -> None:
         if self._in_pi_li:
