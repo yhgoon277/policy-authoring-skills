@@ -1,6 +1,6 @@
 interface:
   display_name: "Policy Render & Deliver"
-  short_description: "spec을 6섹션 self-contained 미리보기로 렌더하고 NC 변환본에 배포본 HTML을 splice합니다"
-  default_prompt: "Use $policy-render-deliver to render the 6-section preview and splice the golden-grade deliverable HTML."
+  short_description: "배포물을 기본 원본 보존(R1 WAIVED) 또는 --golden 옵트인 splice로 빌드하고 5원칙 수용 게이트를 실행합니다"
+  default_prompt: "Use $policy-render-deliver to build the source-preserved deliverable (default) or splice the golden-grade deliverable HTML with --golden."
 policy:
   allow_implicit_invocation: true

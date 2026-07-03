@@ -2,6 +2,21 @@
 
 모든 주요 변경을 기록한다. 버전은 [SemVer](https://semver.org/lang/ko/)를 따른다.
 
+## [0.6.0] — 2026-07-03
+
+**보존 우선 배포물(preserve-first)** — 실사용자(이벤트미션 정책서) 피드백 반영: 배포물 HTML은 기본으로 **원천 완전보존 + 도메인코드 현행화만** 수행한다(정책 목록 설명·정책 상세 표 72개 등 원천 리치 콘텐츠 유지). 골든 렌더는 `--golden` 옵트인으로 강등.
+
+### Changed
+- **`build_deliverable` 기본 동작 전환** — 보존 모드: splice 생략, 배포물 = `relabel(원천)`. `--golden`으로 기존 §5~§6 골든 splice 경로 유지(회귀 없음).
+- **`run_acceptance` 모드 도입**(`--mode preserve|golden`, 기본 preserve) — 보존 모드에서 **R1=WAIVED 명시 기록**(FAIL/BLOCKED 미산입, 몰래 PASS 아님), R2~R5는 동일 측정. `compare_fidelity`에 preserve 모드(R1 검사 생략, HEAD_PRESERVED→**FULL_PRESERVED** 전문서 byte-동일).
+- **`rebuild_policy_from_source` PG 설명 원천 추출** — 원천 §6 정책 목록 표 '설명' 열 → `policy_groups[].description`(원천 정본 우선, spec 폴백) — 배포쌍 JSON 설명 유실 해소.
+
+### Fixed
+- **`run_acceptance` 자동 유도 target 미전달** — target을 R5에서만 해소해 R1/R3/R4 비교가 구코드 원천과 어긋나던 버그(실측: 가짜 FN_DROPPED 86건) — 해소를 최상단으로 이동, 전 오라클에 전달.
+
+### Notes
+- 사용자 결정 기록: 담당자 요구("정책 상세를 원본과 동일하게")에 따라 R1 위배를 감수하고 보존을 기본화. "아예 동일"의 정의 = ID 도메인 세그먼트 치환(R5) 제외 byte-동일. 설계 `docs/superpowers/specs/2026-07-03-preserve-mode-design.md`.
+
 ## [0.5.1] — 2026-07-01
 
 5원칙 **실질화·자기검증** 하드닝 — 감사로 드러난 세 구멍(R2 미배선·R5 취약/비가독·오라클 자기검증 0)을 메워 "플러그인이 5원칙을 자동 테스트로 검수"를 실제로 embody.
