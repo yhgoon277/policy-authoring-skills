@@ -73,7 +73,11 @@ def _resolve_target(spec, target_code):
 
 def build(input_spec, source_html, out_dir, target_code=None, gate=None, approved=None, preserve=False):
     os.makedirs(out_dir, exist_ok=True)
-    spec_in = json.load(open(input_spec, encoding="utf-8")) if isinstance(input_spec, str) else input_spec
+    if isinstance(input_spec, str):
+        with open(input_spec, encoding="utf-8") as _f:
+            spec_in = json.load(_f)
+    else:
+        spec_in = input_spec
     stem = os.path.splitext(os.path.basename(source_html))[0]
     target = _resolve_target(spec_in, target_code)
 
@@ -83,14 +87,16 @@ def build(input_spec, source_html, out_dir, target_code=None, gate=None, approve
     if target:
         spec = dcn.normalize_spec_to(spec, target)
     spec_path = os.path.join(out_dir, stem + "_spec.json")
-    json.dump(spec, open(spec_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    with open(spec_path, "w", encoding="utf-8") as _f:
+        json.dump(spec, _f, ensure_ascii=False, indent=2)
 
     # 4) preview(도너 — 보존 모드에선 참고 산출물) → 5) 배포물 조립
     prev_path = os.path.join(out_dir, stem + "_preview.html")
     _render_preview(spec, prev_path)
     # 보존 모드는 원천의 줄끝(CRLF 등)까지 보존 — 무번역(newline="") 입출력. 골든은 기존 그대로.
     nl = "" if preserve else None
-    base = open(source_html, encoding="utf-8", newline=nl).read()
+    with open(source_html, encoding="utf-8", newline=nl) as _f:
+        base = _f.read()
     if target:
         base = dcn.relabel_to(base, target)
     if preserve:
@@ -98,8 +104,12 @@ def build(input_spec, source_html, out_dir, target_code=None, gate=None, approve
         deliv = base
     else:
         # 골든 경로(기본): 헤드 §0~§4 보존 + §5~§6 골든 이식 (R1 측정)
-        base2, _ = S.inject_css(base, S.extract_rich_css(open(prev_path, encoding="utf-8").read()))
-        deliv = S.splice_sections(base2, open(prev_path, encoding="utf-8").read(), [5, 6])
+        with open(prev_path, encoding="utf-8") as _f:
+            prev_txt = _f.read()
+        base2, _ = S.inject_css(base, S.extract_rich_css(prev_txt))
+        with open(prev_path, encoding="utf-8") as _f:
+            prev_txt2 = _f.read()
+        deliv = S.splice_sections(base2, prev_txt2, [5, 6])
     deliv_path = os.path.join(out_dir, stem + "_deliverable.html")
     with open(deliv_path, "w", encoding="utf-8", newline=nl) as f:
         f.write(deliv)
@@ -125,7 +135,8 @@ if __name__ == "__main__":
     a = ap.parse_args()
     approved = None
     if a.approved and os.path.exists(a.approved):
-        approved = json.load(open(a.approved, encoding="utf-8"))
+        with open(a.approved, encoding="utf-8") as _f:
+            approved = json.load(_f)
     r = build(a.spec, a.source, a.out_dir, target_code=a.target_code, gate=a.gate,
               approved=approved, preserve=a.preserve)
     acc = r["acceptance"]

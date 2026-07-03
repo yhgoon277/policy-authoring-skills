@@ -221,12 +221,14 @@ if __name__ == "__main__":
     ap.add_argument("gen_html")
     ap.add_argument("--target-code", default=None)
     ap.add_argument("--approved", default=None, help="승인된 발산 id JSON(list) 경로")
+    ap.add_argument("--mode", default="golden", choices=("preserve", "golden"),
+                    help="golden(기본)=§5~§6 골든 검사 / preserve=원본 보존 배포물(R1 생략)")
     a = ap.parse_args()
     approved = None
     if a.approved and os.path.exists(a.approved):
         with open(a.approved, encoding="utf-8") as _f:
             approved = json.load(_f)
-    r = compare(a.orig_html, a.gen_html, a.target_code, approved=approved)
+    r = compare(a.orig_html, a.gen_html, a.target_code, approved=approved, mode=a.mode)
     print(json.dumps({"verdict": r["verdict"], "summary": r["summary"],
                       "findings_by_invariant": {inv: sum(1 for f in r["findings"] if f["invariant"] == inv)
                                                 for inv in {f["invariant"] for f in r["findings"]}},

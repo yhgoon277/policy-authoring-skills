@@ -44,7 +44,8 @@ def overlay_unit(cfg, unit):
 def load_css():
     p = os.path.join(SCRIPT_DIR, "preview_style.css")
     if os.path.isfile(p):
-        return open(p, encoding="utf-8").read()
+        with open(p, encoding="utf-8") as _f:
+            return _f.read()
     return "<style></style>"
 
 

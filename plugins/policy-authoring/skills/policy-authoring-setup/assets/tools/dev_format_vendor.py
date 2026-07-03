@@ -530,6 +530,8 @@ class PolicyHTMLParser(HTMLParser):
         detail_tables = list(self._pi_detail_tables)
         self._pi_rules = []
         self._in_pi_li = False
+        self._in_pil_span = False
+        self._pil_buf = []
         self._pi_core_question = ""
         self._pi_core_answers = []
         self._in_core_q_p = False

@@ -120,7 +120,8 @@ def rebuild(spec, source_html, target_code=None):
         pg_descs = {relabel(k): v for k, v in pg_descs.items()}
 
     in_pi_by_name = {_norm(p.get("name", "")): p for p in (spec.get("policy_details") or []) if p.get("name")}
-    spec_pg = {g.get("id"): g for g in (spec.get("policy_groups") or [])}
+    spec_pg = {(relabel(g.get("id")) if relabel else g.get("id")): g
+               for g in (spec.get("policy_groups") or [])}
 
     pds, pg_order = [], []
     pg_seen = {}
@@ -171,7 +172,7 @@ def rebuild(spec, source_html, target_code=None):
     name_by_id = {p["id"]: p["name"] for p in pds}
     pgs = []
     for pg in pg_order:
-        g = spec_pg.get(pg if not relabel else pg, {})  # 이름/설명은 기존 spec PG에서(있으면)
+        g = spec_pg.get(pg, {})  # 이름/설명은 기존 spec PG에서(있으면)
         pgs.append({"id": pg, "name": g.get("name") or pg_names.get(pg, ""), "description": pg_descs.get(pg) or g.get("description", ""),
                     "items": [{"id": pi, "name": name_by_id.get(pi, "")} for pi in pg_seen[pg]]})
 

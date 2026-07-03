@@ -168,7 +168,7 @@ def run(source_html, spec, deliverable_html, target_code=None, gate=None, approv
                              "note": "보존 모드 — 골든 스타일 비적용"} if mode == "preserve"
                             else {"verdict": "NA", "findings": [], "note": "미지원 포맷(파싱 불가)"})
         principles["R3"] = {"verdict": "NA", "findings": [], "note": "미지원 포맷(파싱 불가)"}
-        decisions.append({"principle": "R1/R3", "kind": "unsupported_format",
+        decisions.append({"principle": ("R3" if mode == "preserve" else "R1/R3"), "kind": "unsupported_format",
                           "detail": "원천 HTML이 ID 스킴 없는 포맷 → 자동 정합 불가(수동 매핑 필요)"})
 
     # R2 : 외부 입력 게이트. 실패=spec 저작 미완(usecase_id 등) → 사람 authoring 결정(BLOCKED).

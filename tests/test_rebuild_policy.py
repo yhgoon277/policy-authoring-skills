@@ -65,6 +65,16 @@ class RebuildWiring(unittest.TestCase):
             out = rb.rebuild(spec, self.src)
         self.assertEqual(out["policy_groups"][0]["description"], "기존 설명")
 
+    def test_spec_pg_name_survives_relabel(self):
+        spec = {"policy_details": [],
+                "policy_groups": [{"id": "PG-EVT-PROG-001", "name": "스펙이름", "description": "스펙설명"}]}
+        with patch.object(rb.dfv, "parse_html", return_value=([], [self._item()], None)):
+            out = rb.rebuild(spec, self.src, target_code="EVTMSN")
+        g = out["policy_groups"][0]
+        self.assertEqual(g["id"], "PG-EVTMSN-PROG-001")
+        self.assertEqual(g["name"], "스펙이름")          # 현재는 relabel-miss로 헤딩 폴백 → FAIL
+        self.assertEqual(g["description"], "스펙설명")
+
 
 if __name__ == "__main__":
     unittest.main()
