@@ -92,6 +92,20 @@ class ThreeState(unittest.TestCase):
         self.assertEqual(r["verdict"], "BLOCKED")
         self.assertTrue(any(d["kind"] == "authoring_needed" for d in r["decisions"]))
 
+    def test_auto_resolved_target_reaches_r134_oracles(self):
+        # target 미지정 + spec 세그 자동해소 시 R1/R3(compare)·R4(audit)에도 resolved target 전달
+        sp = self._spec({"meta": {}, "functions": [{"id": "FN-PAY-001"}]})
+        with patch.object(ra.shi, "build_index", return_value=MEASURABLE), \
+             patch.object(ra.cf, "compare", return_value={"findings": []}) as cmp, \
+             patch.object(ra.ca, "audit", return_value={"verdict": "PASS", "findings": []}) as aud, \
+             patch.object(ra, "_run_gate", return_value=("PASS", 0, "errors=0")), \
+             patch.object(ra.dcm, "resolve_target", return_value="PAY"), \
+             patch.object(ra.dcn, "check_r5",
+                          return_value={"verdict": "PASS", "bad_ids": [], "business_code_ok": True}):
+            ra.run("src.html", sp, "deliv.html")
+        self.assertEqual(cmp.call_args.kwargs.get("target_code"), "PAY")
+        self.assertEqual(aud.call_args.kwargs.get("target_code"), "PAY")
+
 
 if __name__ == "__main__":
     unittest.main()

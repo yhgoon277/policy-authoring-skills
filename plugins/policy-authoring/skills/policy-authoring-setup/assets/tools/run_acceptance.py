@@ -106,6 +106,9 @@ def run(source_html, spec, deliverable_html, target_code=None, gate=None, approv
     spec_path = spec if isinstance(spec, str) else None
     principles, decisions = {}, []
 
+    # R5 target을 최상단에서 해소 — R1/R3/R4 비교도 현행화된 코드 기준(자동 유도 시 미전달 버그 수정)
+    target, how = _resolve_target(spec_obj, target_code)
+
     # 측정 가능성(미지원 포맷 판별)
     try:
         o_idx = shi.build_index(source_html)
@@ -115,7 +118,7 @@ def run(source_html, spec, deliverable_html, target_code=None, gate=None, approv
 
     # R1 + R3 : compare_fidelity (principle 태그로 버킷팅)
     if measurable:
-        cmp = cf.compare(source_html, deliverable_html, target_code=target_code, approved=approved)
+        cmp = cf.compare(source_html, deliverable_html, target_code=target, approved=approved)
         r1 = [f for f in cmp["findings"] if f.get("principle") == "R1"]
         r3 = [f for f in cmp["findings"] if f.get("principle") == "R3"]
         r1_high = [f for f in r1 if f["severity"] == "HIGH"]
@@ -157,7 +160,7 @@ def run(source_html, spec, deliverable_html, target_code=None, gate=None, approv
 
     # R4 : 완료 정합(JSON↔HTML)
     if measurable:
-        aud = ca.audit(spec_obj, deliverable_html, target_code=target_code)
+        aud = ca.audit(spec_obj, deliverable_html, target_code=target)
         principles["R4"] = {"verdict": aud["verdict"],
                             "findings": [{"invariant": f["invariant"], "detail": f["detail"]}
                                          for f in aud["findings"]]}
@@ -165,7 +168,6 @@ def run(source_html, spec, deliverable_html, target_code=None, gate=None, approv
         principles["R4"] = {"verdict": "NA", "note": "미지원 포맷(파싱 불가)"}
 
     # R5 : 도메인코드 현행화
-    target, how = _resolve_target(spec_obj, target_code)
     if target:
         chk = dcn.check_r5(spec_obj, target)
         principles["R5"] = {"verdict": chk["verdict"], "target": target, "resolved": how,
