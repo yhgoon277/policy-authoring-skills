@@ -29,6 +29,23 @@ class ThreeState(unittest.TestCase):
             json.dump(spec, f)
         return p
 
+    def _src_file(self, n_tables):
+        p = os.path.join(self.tmp, "src_real.html")
+        body = "".join(f'<table class="policy-detail-table"><tr><td>t{i}</td></tr></table>' for i in range(n_tables))
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(f"<html><body><h3>나. 정책 상세</h3>{body}</body></html>")
+        return p
+
+    def _run_src(self, src_path, spec):
+        sp = self._spec(spec)
+        with patch.object(ra.shi, "build_index", return_value=MEASURABLE), \
+             patch.object(ra.cf, "compare", return_value={"findings": []}), \
+             patch.object(ra.ca, "audit", return_value={"verdict": "PASS", "findings": []}), \
+             patch.object(ra, "_run_gate", return_value=("PASS", 0, "errors=0")), \
+             patch.object(ra.dcn, "check_r5",
+                          return_value={"verdict": "PASS", "bad_ids": [], "business_code_ok": True}):
+            return ra.run(src_path, sp, "deliv.html")
+
     def _run(self, *, measurable=True, cf_findings=None, r4="PASS",
              gate=("PASS", 0, "errors=0"), spec=None, mode=None):
         spec = spec or {"meta": {"business_code": "PAY"}, "functions": [{"id": "FN-PAY-001"}]}
@@ -150,6 +167,21 @@ class ThreeState(unittest.TestCase):
     def test_unknown_mode_rejected(self):
         with self.assertRaises(ValueError):
             ra.run("src.html", self._spec({"meta": {}}), "deliv.html", mode="typo")
+
+    def test_content_fidelity_gap_blocks(self):
+        spec = {"meta": {"business_code": "PAY"}, "functions": [{"id": "FN-PAY-001"}],
+                "policy_details": [{"id": "PI-PAY-A-001-01", "detail_tables": [{"headers": ["h"], "rows": [["r"]]}]}]}
+        r = self._run_src(self._src_file(3), spec)   # 원천 3표 vs spec 1표
+        self.assertEqual(r["verdict"], "BLOCKED")
+        self.assertTrue(any(d["kind"] == "content_fidelity" for d in r["decisions"]))
+
+    def test_content_fidelity_ok_when_covered(self):
+        spec = {"meta": {"business_code": "PAY"}, "functions": [{"id": "FN-PAY-001"}],
+                "policy_details": [{"id": "PI-PAY-A-001-01",
+                                    "detail_tables": [{"headers": ["h"], "rows": [["r"]]}] * 3}]}
+        r = self._run_src(self._src_file(3), spec)
+        self.assertEqual(r["decisions"], [])
+        self.assertEqual(r["verdict"], "DONE")
 
 
 if __name__ == "__main__":

@@ -23,6 +23,7 @@ FAIL로 오判하지 않는다.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -149,6 +150,19 @@ def run(source_html, spec, deliverable_html, target_code=None, gate=None, approv
         for f in r3_loss:  # 원천 내부 불일치(FN_SOURCE_ORPHAN 등 MED) = 사람 확인
             if f["severity"] == "MED":
                 decisions.append({"principle": "R3", "kind": "source_inconsistency", "detail": f["detail"]})
+
+        # R3 콘텐츠 충실도: 원천 정책상세 표가 spec detail_tables로 캡처됐는가(파서 격차 신호 — 사람 결정)
+        try:
+            with open(source_html, encoding="utf-8") as f:
+                _src_txt = f.read()
+        except OSError:
+            _src_txt = ""
+        if _src_txt:
+            n_src = len(re.findall(r'<table class="[^"]*policy-detail-(?:sub)?table', _src_txt))
+            m_spec = sum(len(p.get("detail_tables") or []) for p in spec_obj.get("policy_details") or [])
+            if n_src > m_spec:
+                decisions.append({"principle": "R3", "kind": "content_fidelity",
+                                  "detail": f"원천 정책상세 표 {n_src}개 중 spec 캡처 {m_spec}개 — 파서 격차/저작 확인(사람 결정)"})
     else:
         principles["R1"] = ({"verdict": "WAIVED", "findings": [],
                              "note": "보존 모드 — 골든 스타일 비적용"} if mode == "preserve"
