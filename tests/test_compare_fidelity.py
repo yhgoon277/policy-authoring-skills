@@ -154,5 +154,34 @@ class GoldenStyle(Base):
         self.assertEqual(sev, "MED")
 
 
+class PreserveMode(Base):
+    def test_identical_after_relabel_passes(self):
+        i = idx(f2s={"FN-EVTMSN-CUS-001": ["a"]}, f2pi={"FN-EVTMSN-CUS-001": ["PI-EVTMSN-X-001-01"]})
+        o = self.mk("o.html", "<h2>5.</h2> FN-EVT-CUS-001", i)
+        g = self.mk("g.html", "<h2>5.</h2> FN-EVTMSN-CUS-001", i)
+        r = cf.compare(o, g, target_code="EVTMSN", mode="preserve")
+        self.assertEqual(r["verdict"], "PASS")
+        self.assertEqual(r["findings"], [])
+
+    def test_full_document_diff_fails_as_r3(self):
+        i = idx()
+        o = self.mk("o.html", "<h2>5.</h2> body", i)
+        g = self.mk("g.html", "<h2>5.</h2> DIFFERENT", i)
+        r = cf.compare(o, g, mode="preserve")
+        self.assertIn("FULL_PRESERVED", self.invs(r))
+        self.assertEqual(self.principle_of(r, "FULL_PRESERVED"), "R3")
+        self.assertEqual(r["verdict"], "FAIL")
+
+    def test_preserve_skips_golden_style_checks(self):
+        txt = '<h2>5.</h2><table class="policy-list-table">no-id</table>'
+        i = idx(f2s={"FN-EVTMSN-CUS-001": ["a"]})   # 관련 PI 없음 → golden이면 FN_NO_POLICY
+        o = self.mk("o.html", txt, i)
+        g = self.mk("g.html", txt, i)
+        r = cf.compare(o, g, mode="preserve")
+        self.assertEqual(r["findings"], [])                      # 스타일·완료게이트 미적용
+        r2 = cf.compare(o, g, mode="golden")
+        self.assertIn("STYLE_POLICYLIST_PIID", self.invs(r2))    # golden은 기존 그대로
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -11,6 +11,8 @@ relabel해(R5-aware) 라벨 변경을 손실로 오탐하지 않는다.
 골든보다 풍부한 구간), §5 기능·§6 정책만 골든 스타일로 렌더한다(NC 평면텍스트→골든 리치). 따라서
 헤드(§0~§4)는 원천과 바이트 동일해야 하며(HEAD_PRESERVED), 골든 스타일 검사는 §5+ 본문에만 적용한다.
 
+**모드**: mode="preserve"(보존 모드): R1 검사 생략, HEAD_PRESERVED 대신 FULL_PRESERVED(전문서 byte-동일). 기본 "golden"은 현행 그대로.
+
 불변식(원본=기준). principle 필드로 R1(스타일)/R3(보존)을 태깅:
   [R3·손실=원본−생성]
   FN_DROPPED     §5 기능 정의에서 원본 기능이 생성에 없음(N:M→1:1 붕괴 등)        HIGH
@@ -19,6 +21,7 @@ relabel해(R5-aware) 라벨 변경을 손실로 오탐하지 않는다.
   PI_LOST        정책그룹 내 정책항목(PI)이 원본엔 있는데 생성에 없음              HIGH
   PR_FN_LOST     §4 프로세스→기능 관계가 원본엔 있는데 생성에 없음                 HIGH
   HEAD_PRESERVED §5 이전 헤드(§0~§4)가 원천과 다름(다이어그램·케이스표 변형)       HIGH
+  FULL_PRESERVED 전문서(§0~§6)가 relabel(원천)과 다름(보존 모드 완전보존 위배)      HIGH
   [R3·발산=생성−원본, approved 로그 면제]
   FN_ADDED       원천에 없는 기능이 생성에 추가됨(무단 발산)                       HIGH
   PG_ADDED       원천에 없는 정책그룹이 생성에 추가됨                              HIGH
@@ -45,7 +48,7 @@ _PRINCIPLE = {
     "FN_DROPPED": "R3", "FN_SUBFN_LOST": "R3", "PG_DROPPED": "R3", "PI_LOST": "R3",
     "PR_FN_LOST": "R3", "HEAD_PRESERVED": "R3", "FN_SOURCE_ORPHAN": "R3",
     "FN_ADDED": "R3", "PG_ADDED": "R3", "PI_ADDED": "R3",
-    "STYLE_POLICYLIST_PIID": "R1", "FN_NO_POLICY": "R1",
+    "STYLE_POLICYLIST_PIID": "R1", "FN_NO_POLICY": "R1", "FULL_PRESERVED": "R3",
 }
 
 
@@ -66,7 +69,7 @@ def _is_empty_subfn(vals):
     return set(v.strip() for v in (vals or [])) in _EMPTY_SUBFN
 
 
-def compare(orig_html, gen_html, target_code=None, approved=None):
+def compare(orig_html, gen_html, target_code=None, approved=None, mode="golden"):
     o = shi.build_index(orig_html)
     g = shi.build_index(gen_html)
     if target_code:
@@ -154,25 +157,32 @@ def compare(orig_html, gen_html, target_code=None, approved=None):
         mm = re.search(r'<h2[^>]*>\s*5\.', txt)
         return (txt[:mm.start()], txt[mm.start():]) if mm else (None, txt)
 
-    # (a) HEAD_PRESERVED — §5 이전 헤드(§0~§4)가 원천과 동일(R5 현행화 시 원천 헤드도 목표코드 relabel).
-    o_head, _ = _split_body(orig_txt)
-    g_head, _ = _split_body(gen_txt)
-    if target_code and o_head is not None:
-        o_head = dcn.relabel_to(o_head, target_code)
-    if o_head is not None and g_head is not None and o_head != g_head:
-        add("HEAD_PRESERVED", "HIGH", "head",
-            "§0~§4 헤드가 원천과 다름(완전보존 위배 — 다이어그램·개요·프로세스 케이스표 변형/재생성)")
+    if mode == "preserve":
+        # (a') FULL_PRESERVED — 보존 모드: 전문서(§0~§6)가 relabel(원천)과 byte-동일해야 함
+        o_all = dcn.relabel_to(orig_txt, target_code) if target_code else orig_txt
+        if o_all != gen_txt:
+            add("FULL_PRESERVED", "HIGH", "document",
+                "전문서가 relabel(원천)과 다름(보존 모드 완전보존 위배)")
+    else:
+        # (a) HEAD_PRESERVED — §5 이전 헤드(§0~§4)가 원천과 동일(R5 현행화 시 원천 헤드도 목표코드 relabel).
+        o_head, _ = _split_body(orig_txt)
+        g_head, _ = _split_body(gen_txt)
+        if target_code and o_head is not None:
+            o_head = dcn.relabel_to(o_head, target_code)
+        if o_head is not None and g_head is not None and o_head != g_head:
+            add("HEAD_PRESERVED", "HIGH", "head",
+                "§0~§4 헤드가 원천과 다름(완전보존 위배 — 다이어그램·개요·프로세스 케이스표 변형/재생성)")
 
-    # (b) 골든 스타일 검사 — §5+ 본문에만.
-    _, body_txt = _split_body(gen_txt)
-    pl_tables = re.findall(r'<table class="policy-list-table">(.*?)</table>', body_txt, re.S)
-    if pl_tables and any(("(PI-" not in t and "(POL-" not in t) for t in pl_tables):
-        add("STYLE_POLICYLIST_PIID", "HIGH", "policy_list", "정책목록 '정책 상세'에 PI-id 병기 없음(골든은 명+ID)")
-    # 완료게이트: 관련 정책상세 없는 기능("기능은 무조건 정책상세 포함")
-    no_pi = [fn for fn in g.get("function_to_subfns", {}) if not g.get("function_to_pis", {}).get(fn)]
-    if no_pi:
-        add("FN_NO_POLICY", "MED", "functions",
-            f"관련 정책상세 없는 기능 {len(no_pi)}개(작업자 저작 필요): {no_pi[:5]}")
+        # (b) 골든 스타일 검사 — golden 모드에서만, §5+ 본문.
+        _, body_txt = _split_body(gen_txt)
+        pl_tables = re.findall(r'<table class="policy-list-table">(.*?)</table>', body_txt, re.S)
+        if pl_tables and any(("(PI-" not in t and "(POL-" not in t) for t in pl_tables):
+            add("STYLE_POLICYLIST_PIID", "HIGH", "policy_list", "정책목록 '정책 상세'에 PI-id 병기 없음(골든은 명+ID)")
+        # 완료게이트: 관련 정책상세 없는 기능("기능은 무조건 정책상세 포함")
+        no_pi = [fn for fn in g.get("function_to_subfns", {}) if not g.get("function_to_pis", {}).get(fn)]
+        if no_pi:
+            add("FN_NO_POLICY", "MED", "functions",
+                f"관련 정책상세 없는 기능 {len(no_pi)}개(작업자 저작 필요): {no_pi[:5]}")
 
     highs = sum(1 for f in findings if f["severity"] == "HIGH")
     return {
