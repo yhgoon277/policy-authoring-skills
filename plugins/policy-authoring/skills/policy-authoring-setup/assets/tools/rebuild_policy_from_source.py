@@ -8,6 +8,7 @@ R3 결정: 원천 HTML(진실원천)이 PI 정본. reconcile가 입력 spec(기�
     ·criteria·표)만 이름매칭된 입력 spec PI에서 **가산 보강**(원천을 덮어쓰지 않음 → R3 무위배).
 원천 파싱은 dev_format_vendor.parse_html(rich PolicyDetailItem: rules·detail_tables 포함).
 R5 도메인코드 현행화 시 target_code로 원천 id를 relabel.
+PG description은 원천 §6 정책 목록 표의 '설명' 열을 정본으로 추출(없으면 입력 spec 폴백) — 배포쌍 JSON의 설명 유실 방지.
 """
 import copy
 import os
@@ -41,6 +42,28 @@ def _pg_names_from_html(html):
         name = re.sub(r'^\s*\d+\)\s*', '', name).strip()
         if name and pgm.group(1) not in out:
             out[pgm.group(1)] = name
+    return out
+
+
+def _pg_desc_from_tables(tables):
+    """원천 §6 '정책 목록' 표(정책 ID·정책명·설명·정책 항목)에서 PG→설명 추출(첫 값 우선).
+
+    같은 PG가 프로세스별 표에 반복 등장하므로 첫 설명을 정본으로 삼는다. '기능 ID' 등
+    타 목록 표는 '정책 ID' 헤더 부재로 자연 제외."""
+    out = {}
+    for t in tables:
+        hs = t.headers or []
+        if not any("정책 ID" in (h or "") for h in hs):
+            continue
+        di = next((i for i, h in enumerate(hs) if "설명" in (h or "")), -1)
+        if di < 0:
+            continue
+        for row in t.rows:
+            pg = next((i for c in row for i in (c.ids or []) if i.startswith("PG-")), None)
+            if pg and di < len(row):
+                desc = (row[di].text or "").strip()
+                if desc and pg not in out:
+                    out[pg] = desc
     return out
 
 
@@ -81,6 +104,7 @@ def rebuild(spec, source_html, target_code=None):
     tables, items, _ = dfv.parse_html(Path(source_html))
     html_text = Path(source_html).read_text(encoding="utf-8")
     pg_names = _pg_names_from_html(html_text)
+    pg_descs = _pg_desc_from_tables(tables)
     # dev_format_vendor의 pg_id가 일부 원천(§6 변형)에서 누락되므로, 견고 파서(nc_html_link)의
     # PG→PI 매핑으로 PI→PG 폴백 테이블을 만든다(원본 코드 기준). 누락 PI에 group_id 채움.
     pi_to_pg = {}
@@ -93,6 +117,7 @@ def rebuild(spec, source_html, target_code=None):
         import domain_code_normalize as dcn
         relabel = lambda s: dcn.relabel_to(s, target_code)
         pg_names = {relabel(k): v for k, v in pg_names.items()}
+        pg_descs = {relabel(k): v for k, v in pg_descs.items()}
 
     in_pi_by_name = {_norm(p.get("name", "")): p for p in (spec.get("policy_details") or []) if p.get("name")}
     spec_pg = {g.get("id"): g for g in (spec.get("policy_groups") or [])}
@@ -147,7 +172,7 @@ def rebuild(spec, source_html, target_code=None):
     pgs = []
     for pg in pg_order:
         g = spec_pg.get(pg if not relabel else pg, {})  # 이름/설명은 기존 spec PG에서(있으면)
-        pgs.append({"id": pg, "name": g.get("name") or pg_names.get(pg, ""), "description": g.get("description", ""),
+        pgs.append({"id": pg, "name": g.get("name") or pg_names.get(pg, ""), "description": pg_descs.get(pg) or g.get("description", ""),
                     "items": [{"id": pi, "name": name_by_id.get(pi, "")} for pi in pg_seen[pg]]})
 
     out = copy.deepcopy(spec)
