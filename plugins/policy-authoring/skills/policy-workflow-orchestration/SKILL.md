@@ -29,7 +29,7 @@ version: 0.4.0
 | 5 | enrich(NC 풀스키마·decision_spec 시드) + 감사 STRUCTURAL 0 | `policy-integrity-audit` |
 | 6 | 요구사항 커버리지 검토(매핑·품질 갭) | 방법론 문서(아래) |
 | 7 | NC 게이트 G2(요구↔노드)·G5(decision_spec 판정축) | `policy-nc-studio-gate` |
-| 8 | render(6섹션 HTML preview) + 배포본 빌드(기본=보존 모드; `--golden`=splice §5·§6) | `policy-render-deliver` |
+| 8 | render(6섹션 HTML preview) + 배포본 빌드(기본=골든 splice §5·§6; `--preserve`=원천 완전보존 옵트인) | `policy-render-deliver` |
 | 9 | **완료 게이트 — 5원칙 검수**(`build_deliverable`/`run_acceptance` → DONE) | `policy-render-deliver` |
 
 > 순서는 의존성 순(앞 phase 출력이 뒤 phase 입력). hub처럼 한 번 완주한 unit을 재편집할 때는 **FN 레이어·명칭·applies_to·PI group_id를 고정**하고 값 확정/배지 제거만 한다.
@@ -38,7 +38,7 @@ version: 0.4.0
 
 ## 완료 정의 — 5원칙 게이트 (플러그인이 스스로 검수·확정)
 작성 단위의 **완료는 5원칙 통합 게이트 `run_acceptance`(진입점 `build_deliverable`)가 판정**한다. 육안·부분 grep은 보조일 뿐 계약이 아니다.
-- **R1 골든 스타일**(--golden 옵트인 시 §5~§6 골든 렌더 측정; 기본 보존 모드에선 **WAIVED로 명시 기록**) · **R2 입력 게이트**(번들 `validate_nc_input` errors=0, 경로 없이 기본 실행) · **R3 원천 보존**(원천 HTML 정본 대비 무손실·무단발산 0·헤드 §0~§4 완전보존; **보존 모드에선 헤드만이 아니라 전문서 byte-동일(FULL_PRESERVED, 줄끝 포함)**) · **R4 완료 정합**(JSON↔HTML) · **R5 도메인코드 현행화**(권위표 `domain_codes.md`→ 전 ID 세그먼트 relabel; 미등록 도메인은 `add_domain`으로 대화형 등록).
+- **R1 골든 스타일**(기본 골든 모드에서 §5~§6 골든 렌더 측정; **`--preserve` 옵트인 시 WAIVED로 명시 기록** — FAIL/BLOCKED 미산입, 몰래 PASS 아님) · **R2 입력 게이트**(번들 `validate_nc_input` errors=0, 경로 없이 기본 실행) · **R3 원천 보존**(원천 HTML 정본 대비 무손실·무단발산 0·헤드 §0~§4 완전보존; **`--preserve` 모드에선 전문서 byte-동일(FULL_PRESERVED, 줄끝 포함)**) · **R4 완료 정합**(JSON↔HTML) · **R5 도메인코드 현행화**(권위표 `domain_codes.md`→ 전 ID 세그먼트 relabel; 미등록 도메인은 `add_domain`으로 대화형 등록).
 - **3-상태**: **DONE**(5원칙 PASS; WAIVED(R1, 보존 모드)는 FAIL/BLOCKED 미산입) / **BLOCKED**(결함 없으나 사람결정 대기 — 미지원 포맷·usecase_id·정책상세 저작·원천 §4↔§5 불일치·발산 승인/제외·R5 도메인 미등록→대화형 등록) / **FAIL**(배포물 원칙 RED = 자동 수정 대상).
 - **최종 산출물 = 5원칙 통과 HTML+JSON 한 쌍**(`build_deliverable` out-dir의 `_deliverable.html` + `_spec.json`).
 - **BLOCKED은 실패가 아니라 사람 결정 요청** — `policy-html-json-check`/`decision_guide`로 처리 후 재검수. **원칙·목표가 바뀌면 이 게이트(오라클·도구)에 반드시 반영**한다(플러그인이 산출물). 플러그인 도구·오라클을 수정하면 `validate_plugin.py --check-oracles`로 5원칙 오라클 자기검증(`tests/`)을 통과해야 릴리스한다.
@@ -51,11 +51,11 @@ tools/overrides/<unit>.py 편집(PI 본문·applies_to·rule_type·decision_spec
 → python3 tools/build_spec.py         --config=policy_config.json --unit=<unit>
 → python3 tools/audit_id_integrity.py --config=policy_config.json --unit=<unit>   # STRUCTURAL 0 (exit 0) 필수
 → python3 tools/render_preview.py      --config=policy_config.json --unit=<unit>
-→ python3 tools/splice_nc_html.py      --unit=<unit> --base=<원천 HTML>           # --golden 경로 전용(§5·6 교체); 기본 보존 경로는 splice 생략. splice 산출물은 반드시 run_acceptance --mode=golden으로 검수(기본 preserve와 혼용 금지)
-→ python3 tools/run_acceptance.py      --source=<원천> --spec=<spec> --deliverable=<배포> [--mode=preserve|golden]  # 5원칙 DONE(기본 preserve=R1 WAIVED, R2 게이트 기본 번들); --golden 시 R1 측정
+→ python3 tools/splice_nc_html.py      --unit=<unit> --base=<원천 HTML>           # 기본 경로(골든, §5·6 교체); --preserve 경로는 splice 생략. splice 산출물은 반드시 run_acceptance --mode=golden으로 검수(preserve와 혼용 금지)
+→ python3 tools/run_acceptance.py      --source=<원천> --spec=<spec> --deliverable=<배포> [--mode=preserve|golden]  # 기본 golden(R1 측정, R2 게이트 기본 번들); --mode=preserve 시 R1=WAIVED 명시
 → 미리보기·spliced 육안 확인 → 선별 커밋
 ```
-> 원천 HTML 기반 신규 배포는 위를 묶은 **`build_deliverable.py`**(기본 보존 모드; `--golden`으로 splice 경로) 한 번으로 대체 가능.
+> 원천 HTML 기반 신규 배포는 위를 묶은 **`build_deliverable.py`**(기본 골든 splice; `--preserve`로 원천 완전보존 경로) 한 번으로 대체 가능.
 보조 게이트: `python3 tools/coverage_gate.py --config=policy_config.json --unit=<unit>`. 루프의 근거·규율 상세 → **[references/edit-loop.md](references/edit-loop.md)**.
 
 ## 상시 규율 (전 phase 공통)
@@ -79,5 +79,5 @@ BL 보강·PI 배치 등 **큰 묶음**을 끝내면, 편집자와 분리된 **�
 - 계층·FN 분화(①) → `policy-hierarchy-decomposition` / 명칭·가독성(②) → `policy-naming-readability`.
 - applies_to·PI 본문·팩트체크(③) → `policy-detail-authoring`.
 - 감사 STRUCTURAL 0·롤업 재계산(④) → `policy-integrity-audit`.
-- render·배포본 빌드(기본=보존 모드; `--golden`=splice §5·§6) → `policy-render-deliver` / NC 게이트 G2·G5 → `policy-nc-studio-gate`.
+- render·배포본 빌드(기본=골든 splice §5·§6; `--preserve`=원천 완전보존 옵트인) → `policy-render-deliver` / NC 게이트 G2·G5 → `policy-nc-studio-gate`.
 - 외부 HTML↔JSON 사전 검토·조건부 복원(인테이크·NC 라운드트립) → `policy-html-json-check`.

@@ -4,19 +4,23 @@
 
 ## [0.6.0] — 2026-07-03
 
-**보존 우선 배포물(preserve-first)** — 실사용자(이벤트미션 정책서) 피드백 반영: 배포물 HTML은 기본으로 **원천 완전보존 + 도메인코드 현행화만** 수행한다(정책 목록 설명·정책 상세 표 72개 등 원천 리치 콘텐츠 유지). 골든 렌더는 `--golden` 옵트인으로 강등.
+**R1 골든 렌더 기본 유지 + `--preserve` 옵트인 신설** — 기본 배포물은 **§5~§6 골든 splice(R1 측정)** 그대로 유지(팀 계약 불변). 특수 요구("원본과 동일") 대응 전용 **`--preserve` 경로**를 옵트인으로 신설: 배포물 = 원천 완전보존 + R5 relabel만, R1=WAIVED 명시 기록(몰래 PASS 아님), R2~R5 동일 측정. 실사용 사례: 이벤트미션 담당자의 "원본 그대로" 요구.
 
-### Changed
-- **`build_deliverable` 기본 동작 전환** — 보존 모드: splice 생략, 배포물 = `relabel(원천)`. `--golden`으로 기존 §5~§6 골든 splice 경로 유지(회귀 없음).
-- **`run_acceptance` 모드 도입**(`--mode preserve|golden`, 기본 preserve) — 보존 모드에서 **R1=WAIVED 명시 기록**(FAIL/BLOCKED 미산입, 몰래 PASS 아님), R2~R5는 동일 측정. `compare_fidelity`에 preserve 모드(R1 검사 생략, HEAD_PRESERVED→**FULL_PRESERVED** 전문서 byte-동일).
-- **`rebuild_policy_from_source` PG 설명 원천 추출** — 원천 §6 정책 목록 표 '설명' 열 → `policy_groups[].description`(원천 정본 우선, spec 폴백) — 배포쌍 JSON 설명 유실 해소.
+### Added
+- **`--preserve` / `--mode preserve|golden`** — `build_deliverable`/`run_acceptance`에 보존 모드 경로 추가. 기본 `golden`(R1 측정, splice[5,6]). `--preserve` 시 FULL_PRESERVED 전문서 byte-동일(CRLF 포함 무번역), R1=WAIVED 기록. 잘못된 mode 값은 ValueError로 즉시 거부.
+- **파서 PI 표 캡처 확장** — `policy-detail-table` 클래스 캡처 추가(골든·간소화 포맷 공통, 표 유실 근인 해소; 골든 샘플 4→35/35 복구). `_pi_content_nest` 중첩 처리 수정. 간소화 포맷 `policy-item-line` 불릿 → rules/criteria 정규화(이벤트미션 0→238/238).
+- **`content_fidelity` decision(오라클 신규 신호)** — 원천 정책 상세 표 N vs spec detail_tables M, N>M 이면 BLOCKED(사람 신호). 자동 충전이 불가능한 표 유실을 오라클이 감지해 사람 결정을 요청.
+- **`PG_LIST_DETAIL_MISMATCH`(MED/R3, 오라클 신규 신호)** — 목록표↔상세 PG 구성 불일치를 단일 집계 신호로 발행. 결제 실측 6건 진성 검출. 빈 이름 가드 내장.
+- **`rebuild_policy_from_source` PG 설명 원천 추출** — 원천 §6 정책 목록 표 '설명' 열 → `policy_groups[].description`(원천 정본 우선, spec 폴백). 배포쌍 JSON 설명 유실 해소(70/70).
 
 ### Fixed
-- **`run_acceptance` 자동 유도 target 미전달** — target을 R5에서만 해소해 R1/R3/R4 비교가 구코드 원천과 어긋나던 버그(실측: 가짜 FN_DROPPED 86건) — 해소를 최상단으로 이동, 전 오라클에 전달.
-- **보존 모드 줄끝 보존** — 원천이 CRLF일 때 텍스트 모드 입출력이 LF로 정규화해 byte-동일이 깨지던 문제: 보존 경로를 무번역(`newline=""`) 입출력으로 전환(+오라클도 보존 모드에선 줄끝 포함 비교). 통합테스트를 줄끝-보존 비교로 강화.
+- **`run_acceptance` 자동 유도 target 미전달** — target 해소를 R5 단계에만 국한해 R1/R3/R4가 구코드 원천과 비교하던 버그(실측: 가짜 FN_DROPPED 86건). 해소 로직을 최상단으로 이동해 전 오라클에 전달.
+- **보존 경로 CRLF 보존** — 원천이 CRLF일 때 텍스트 모드 입출력이 LF로 정규화해 byte-동일이 깨지던 문제: 보존 경로를 `newline=""` 무번역 입출력으로 전환. 오라클도 보존 모드에선 줄끝 포함 비교.
+- **`rebuild` relabel 시 spec PG name/desc 폴백 사장** — relabel 경로에서 spec의 PG 이름/설명이 원천 추출값보다 우선되던 경로를 역전 수정(원천 정본 우선).
+- **ResourceWarning 0** — 파일 핸들 미닫힘 → `with` 블록으로 전환.
 
 ### Notes
-- 사용자 결정 기록: 담당자 요구("정책 상세를 원본과 동일하게")에 따라 R1 위배를 감수하고 보존을 기본화. "아예 동일"의 정의 = ID 도메인 세그먼트 치환(R5) 제외 byte-동일. 설계 `docs/superpowers/specs/2026-07-03-preserve-mode-design.md`.
+- 기본값은 골든(팀 계약 불변) — `--preserve`는 담당자 요구가 있는 사례별 옵트인. tests 37→67(신규 30케이스: 파서·content_fidelity·PG_LIST_DETAIL_MISMATCH·preserve 경로·통합).
 
 ## [0.5.1] — 2026-07-01
 

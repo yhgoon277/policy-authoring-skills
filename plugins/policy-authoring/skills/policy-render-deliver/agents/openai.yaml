@@ -1,6 +1,6 @@
 interface:
   display_name: "Policy Render & Deliver"
-  short_description: "배포물을 기본 원본 보존(R1 WAIVED) 또는 --golden 옵트인 splice로 빌드하고 5원칙 수용 게이트를 실행합니다"
-  default_prompt: "Use $policy-render-deliver to build the source-preserved deliverable (default) or splice the golden-grade deliverable HTML with --golden."
+  short_description: "배포물을 기본 골든 splice(R1 측정) 또는 --preserve 옵트인 원천보존(R1 WAIVED)으로 빌드하고 5원칙 수용 게이트를 실행합니다"
+  default_prompt: "Use $policy-render-deliver to build the golden-grade deliverable HTML (default: splice §5~§6, R1 measured) or build the source-preserved deliverable with --preserve (R1 WAIVED)."
 policy:
   allow_implicit_invocation: true

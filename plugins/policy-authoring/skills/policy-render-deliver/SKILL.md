@@ -1,6 +1,6 @@
 ---
 name: policy-render-deliver
-description: Build the source-preserved deliverable (default) or render and splice the rich policy-detail sections into an NC스튜디오 converted HTML for the golden-grade deliverable. Use when regenerating the 6-section preview, building the final deliverable HTML, running the 5-principle acceptance gate (run_acceptance / build_deliverable), registering an unmapped domain code (R5), fixing a json↔html 이격 from hand-edited HTML, or asked why the NC download renders policy detail flat. Trigger on "렌더", "render_preview", "배포 HTML", "splice", "build_deliverable", "run_acceptance", "완료 게이트", "5원칙", "도메인코드", "대화형 등록", "NC 변환본", "골든 샘플", "평면 렌더", "수기 HTML 편집", "원본 보존", "보존 모드", "--golden".
+description: Render and splice the rich policy-detail sections into an NC스튜디오 converted HTML for the golden-grade deliverable (default), or build a source-fully-preserved deliverable with --preserve (R1 WAIVED). Use when regenerating the 6-section preview, building the final deliverable HTML, running the 5-principle acceptance gate (run_acceptance / build_deliverable), registering an unmapped domain code (R5), fixing a json↔html 이격 from hand-edited HTML, or asked why the NC download renders policy detail flat. Trigger on "렌더", "render_preview", "배포 HTML", "splice", "build_deliverable", "run_acceptance", "완료 게이트", "5원칙", "도메인코드", "대화형 등록", "NC 변환본", "골든 샘플", "평면 렌더", "수기 HTML 편집", "원본 보존", "--preserve".
 version: 0.4.0
 ---
 
@@ -8,22 +8,22 @@ version: 0.4.0
 
 > **Claude/Codex에서**: spec JSON과 (배포 시) NC스튜디오 변환 HTML을 준비하고 적용을 요청하면 가이드대로 동작한다. `policy-*` 스킬을 함께 설치하는 것을 권장한다.
 
-HTML은 `render_preview.py`로 100% 생성한다(**수기 HTML 편집 금지** — json↔html 이격 원천 차단). **기본 배포본은 원천 HTML 완전보존 + R5 도메인코드 현행화(relabel)만** 수행한다(`--golden` 옵트인 시 preview의 리치 정책 상세를 §5·§6에 splice해 골든급으로 만든다).
+HTML은 `render_preview.py`로 100% 생성한다(**수기 HTML 편집 금지** — json↔html 이격 원천 차단). **기본 배포본은 §5~§6 골든 스타일 렌더(splice[5,6], R1 측정)** — 팀 계약 불변. 특수 요구용 **`--preserve` 옵트인** 시 원천 완전보존+R5 relabel만 수행(R1=WAIVED 명시).
 
 > **진실원천(R3)**: 기존/외부 HTML에서 편집을 시작하면 **그 원천 HTML이 진실원천**이다(짝 JSON은 없거나 stale일 수 있음). spec은 원천에서 재구성하며(`rebuild_policy_from_source`), 원천의 UC/PR/FN/PG/PI 매핑·콘텐츠를 **사용자 승인 없이 바꾸지 않는다**(발산 금지).
 
-## 배포물 구조 (기본=원본 보존 · --golden=골든 렌더)
-- **기본(보존 모드)**: 배포물 = **원천 HTML §0~§6 완전보존 + R5 도메인코드 현행화(relabel)만**. 정책 목록 설명·정책 상세 표 등 원천 리치 콘텐츠가 그대로 유지된다. R1(골든 스타일)은 **WAIVED로 명시 기록**(몰래 PASS 아님), R2~R5는 동일 측정 → DONE 가능.
-- **`--golden`(옵트인)**: §0~§4 원천 보존 + **§5 기능·§6 정책 골든 스타일 렌더**(`splice[5,6]`) — 기존 R1 측정 경로. NC 평면텍스트를 골든 리치로 바꾸고 싶을 때만.
+## 배포물 구조 (기본=골든 렌더 · --preserve=원천 완전보존 옵트인)
+- **기본(골든 모드)**: §0~§4 원천 보존 + **§5 기능·§6 정책 골든 스타일 렌더**(`splice[5,6]`) — R1 측정. NC 평면텍스트를 골든 리치로 만드는 표준 경로.
+- **`--preserve`(옵트인)**: 배포물 = **원천 HTML §0~§6 완전보존 + R5 도메인코드 현행화(relabel)만**. 담당자가 "원본과 동일"을 요구하는 사례별 사용. R1(골든 스타일)은 **WAIVED로 명시 기록**(FAIL/BLOCKED 미산입, 몰래 PASS 아님), R2~R5는 동일 측정 → DONE 가능.
 - 어느 모드든 render_preview는 §0~§6 전체 preview를 생성(보존 모드에선 참고 산출물).
 
 ## 5원칙 완료 게이트 — 이 스킬의 산출은 `run_acceptance`로 검수·확정한다
 플러그인은 배포물을 **R1(골든 스타일)·R2(입력 게이트)·R3(원천 보존)·R4(완료 정합)·R5(도메인코드 현행화)** 5원칙으로 자동 검수한다. **단일 진입점 `build_deliverable.py`**가 아래 파이프라인을 묶어 `run_acceptance`로 3-상태(DONE/BLOCKED/FAIL) 판정을 낸다:
 ```
 python3 tools/build_deliverable.py --spec=<입력 spec.json> --source=<원천 HTML> \
-    --out-dir=<dir> [--target-code=<R5코드>] [--gate=<커스텀 게이트; 미지정 시 번들 자동>] [--golden]
-# 기본(보존 모드): rebuild_policy_from_source → fn_pi_derive → normalize_spec_to(R5) → render_preview(참고 preview) → relabel(원천)=배포물 → run_acceptance
-# --golden 옵트인: rebuild → derive → normalize(R5) → render_preview(§0~§6) → splice_nc_html[5,6] → run_acceptance(--mode=golden)
+    --out-dir=<dir> [--target-code=<R5코드>] [--gate=<커스텀 게이트; 미지정 시 번들 자동>] [--preserve]
+# 기본(골든 모드): rebuild_policy_from_source → fn_pi_derive → normalize_spec_to(R5) → render_preview(§0~§6) → splice_nc_html[5,6] → run_acceptance(--mode=golden)
+# --preserve 옵트인: rebuild → derive → normalize(R5) → render_preview(참고 preview) → relabel(원천)=배포물 → run_acceptance(--mode=preserve, R1=WAIVED)
 ```
 - **DONE** = 5원칙 전부 PASS. **BLOCKED** = 결함 없으나 사람결정 대기(미지원 포맷·usecase_id 저작·정책상세 저작·원천 §4↔§5 불일치·발산 승인/제외·R5 도메인 미등록). **FAIL** = 배포물 원칙(R1/R3/R4/R5) RED(자동 수정 대상). **완료는 DONE(또는 BLOCKED 항목을 사람이 처리)** 후 확정.
 - **최종 산출물 = 5원칙을 통과한 HTML+JSON 한 쌍**(`<원천>_deliverable.html` + `<원천>_spec.json`, out-dir에 생성)(보존 모드에선 R1=WAIVED 포함 가능). 이 한 쌍이 이 스킬의 결론이다.
@@ -52,7 +52,7 @@ override 편집 → `build_spec` → `audit_id_integrity`(STRUCTURAL 0, → `pol
 python3 tools/render_preview.py <spec.json> --out=<preview>    # 6-섹션 self-contained HTML
 python3 tools/splice_nc_html.py --unit=<unit> --base=<원천 HTML>   # 배포본(§5·6 교체 + 리치 CSS 주입)
 python3 tools/run_acceptance.py --source=<원천> --spec=<spec> --deliverable=<배포> [--mode=preserve|golden] [--target-code=..] [--gate=커스텀]
-# 기본 --mode=preserve(R1=WAIVED 명시). --mode=golden 시 R1 측정. R2 게이트는 미지정 시 번들 validate_nc_input.py로 자동 실행(NA 없음).
+# 기본 --mode=golden(R1 측정, splice[5,6] 경로). --mode=preserve 시 R1=WAIVED 명시. R2 게이트는 미지정 시 번들 validate_nc_input.py로 자동 실행(NA 없음).
 ```
 
 ## 1. render_preview — preview 생성
