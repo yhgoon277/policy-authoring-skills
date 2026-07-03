@@ -44,19 +44,19 @@ class Build(unittest.TestCase):
             r = bd.build(self.spec, self.src, self.tmp, target_code="EVTMSN", **kw)
         return r, spl, rar
 
-    def test_preserve_default_is_relabeled_source(self):
+    def test_golden_default_splices(self):
         r, spl, rar = self._build()
-        with open(r["deliverable"], encoding="utf-8") as f:
-            self.assertEqual(f.read(), dcn.relabel_to(SRC, "EVTMSN"))
-        spl.assert_not_called()
-        self.assertEqual(rar.call_args.kwargs.get("mode"), "preserve")
-
-    def test_golden_optin_splices(self):
-        r, spl, rar = self._build(golden=True)
         with open(r["deliverable"], encoding="utf-8") as f:
             self.assertEqual(f.read(), "<golden/>")
         spl.assert_called_once()
         self.assertEqual(rar.call_args.kwargs.get("mode"), "golden")
+
+    def test_preserve_optin_is_relabeled_source(self):
+        r, spl, rar = self._build(preserve=True)
+        with open(r["deliverable"], encoding="utf-8", newline="") as f:
+            self.assertEqual(f.read(), dcn.relabel_to(SRC, "EVTMSN"))
+        spl.assert_not_called()
+        self.assertEqual(rar.call_args.kwargs.get("mode"), "preserve")
 
 
 if __name__ == "__main__":

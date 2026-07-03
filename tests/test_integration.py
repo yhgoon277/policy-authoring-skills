@@ -41,24 +41,27 @@ class BuildDeliverable(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.out, ignore_errors=True)
 
-    def test_payment_end_to_end(self):
+    def test_payment_end_to_end_golden_default(self):
         spec, html = _find("결제")
         if not (spec and html):
             self.skipTest("결제 쌍을 찾지 못함")
         r = bd.build(spec, html, self.out)
         acc = r["acceptance"]
-        # (1) 산출물 한 쌍이 실제로 생성됨
-        self.assertTrue(os.path.exists(r["spec"]), "최종 spec JSON 생성")
-        self.assertTrue(os.path.exists(r["deliverable"]), "최종 배포 HTML 생성")
-        # (2) R5 target 자동 해소(결제 → PAY)
+        self.assertTrue(os.path.exists(r["spec"]) and os.path.exists(r["deliverable"]))
         self.assertEqual(r["target"], "PAY")
-        # (3) R2 게이트가 기본 실행되어 실측됨(NA 아님)
         self.assertIn(acc["summary"]["R2"], ("PASS", "FAIL"))
-        # (4) 파이프라인이 유효한 3-상태로 완료(크래시 없음)
         self.assertIn(acc["verdict"], ("DONE", "BLOCKED", "FAIL"))
-        # (5) 측정 가능 포맷이므로 R4가 NA로 떨어지지 않음(R1은 (6)에서 WAIVED로 고정 검증)
+        # 골든 기본: R1은 측정된다(WAIVED/NA 아님)
+        self.assertIn(acc["summary"]["R1"], ("PASS", "FAIL"))
         self.assertNotEqual(acc["summary"]["R4"], "NA")
-        # (6) 보존 기본: R1은 WAIVED로 명시 기록되고, 배포물 = relabel(원천) byte-동일(줄끝 포함)
+
+    def test_payment_end_to_end_preserve_optin(self):
+        spec, html = _find("결제")
+        if not (spec and html):
+            self.skipTest("결제 쌍을 찾지 못함")
+        r = bd.build(spec, html, self.out, preserve=True)
+        acc = r["acceptance"]
+        # 보존 옵트인: R1=WAIVED 명시 + 배포물 = relabel(원천) byte-동일(줄끝 포함)
         self.assertEqual(acc["summary"]["R1"], "WAIVED")
         import domain_code_normalize as dcn
         with open(html, encoding="utf-8", newline="") as f:

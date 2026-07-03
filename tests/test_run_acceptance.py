@@ -107,14 +107,14 @@ class ThreeState(unittest.TestCase):
         self.assertEqual(cmp.call_args.kwargs.get("target_code"), "PAY")
         self.assertEqual(aud.call_args.kwargs.get("target_code"), "PAY")
 
-    def test_preserve_default_waives_r1(self):
-        r = self._run()   # mode 미지정 = API 기본(preserve)
+    def test_preserve_waives_r1(self):
+        r = self._run(mode="preserve")   # preserve 모드 → R1 WAIVED
         self.assertEqual(r["summary"]["R1"], "WAIVED")
         self.assertEqual(r["verdict"], "DONE")
         self.assertEqual(r["decisions"], [])
 
     def test_preserve_r1_findings_never_fail_or_block(self):
-        r = self._run(cf_findings=[
+        r = self._run(mode="preserve", cf_findings=[
             {"invariant": "STYLE_POLICYLIST_PIID", "severity": "HIGH",
              "principle": "R1", "key": "policy_list", "detail": "x"},
             {"invariant": "FN_NO_POLICY", "severity": "MED",
@@ -123,7 +123,7 @@ class ThreeState(unittest.TestCase):
         self.assertEqual(r["verdict"], "DONE")   # R1 findings는 보존 모드에서 무시(사용자 결정)
 
     def test_preserve_r3_full_preserved_still_fails(self):
-        r = self._run(cf_findings=[{"invariant": "FULL_PRESERVED", "severity": "HIGH",
+        r = self._run(mode="preserve", cf_findings=[{"invariant": "FULL_PRESERVED", "severity": "HIGH",
                                     "principle": "R3", "key": "document", "detail": "diff"}])
         self.assertEqual(r["verdict"], "FAIL")
         self.assertEqual(r["summary"]["R3"], "FAIL")
@@ -131,7 +131,7 @@ class ThreeState(unittest.TestCase):
     def test_mode_threads_to_compare(self):
         # ra→cf mode 전달 회귀 가드: 끊기면 FULL_PRESERVED 보장이 조용히 사라짐
         sp = self._spec({"meta": {}, "functions": [{"id": "FN-PAY-001"}]})
-        for mode, kw in (("preserve", {}), ("golden", {"mode": "golden"})):
+        for mode, kw in (("golden", {}), ("preserve", {"mode": "preserve"})):
             with patch.object(ra.shi, "build_index", return_value=MEASURABLE), \
                  patch.object(ra.cf, "compare", return_value={"findings": []}) as cmp, \
                  patch.object(ra.ca, "audit", return_value={"verdict": "PASS", "findings": []}), \
@@ -141,6 +141,11 @@ class ThreeState(unittest.TestCase):
                               return_value={"verdict": "PASS", "bad_ids": [], "business_code_ok": True}):
                 ra.run("src.html", sp, "deliv.html", **kw)
             self.assertEqual(cmp.call_args.kwargs.get("mode"), mode)
+
+    def test_default_mode_is_golden(self):
+        r = self._run()   # mode 미지정 = API 기본(golden) → R1은 측정됨
+        self.assertEqual(r["summary"]["R1"], "PASS")
+        self.assertEqual(r["verdict"], "DONE")
 
     def test_unknown_mode_rejected(self):
         with self.assertRaises(ValueError):

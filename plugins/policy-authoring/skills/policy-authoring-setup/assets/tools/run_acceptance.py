@@ -11,7 +11,7 @@
   R4 완료 정합     completion_audit (JSON↔HTML)
   R5 도메인코드    domain_code_normalize.check_r5(spec, target)
 
-모드: preserve(기본)=배포물이 원본 보존(R1 WAIVED 기록, R3=FULL_PRESERVED 전문서) / golden=§5~§6 골든 렌더(R1 측정). 어느 모드든 R2·R4·R5는 동일 측정.
+모드: golden(기본)=§5~§6 골든 렌더(R1 측정) / preserve=배포물이 원본 보존(R1 WAIVED 기록, R3=FULL_PRESERVED 전문서). 어느 모드든 R2·R4·R5는 동일 측정.
 
 3-상태 종합:
   DONE    측정된 원칙 전부 PASS + 미해결 사람결정 0
@@ -104,7 +104,7 @@ def _load(spec):
 
 
 def run(source_html, spec, deliverable_html, target_code=None, gate=None, approved=None,
-        mode="preserve"):
+        mode="golden"):
     if mode not in ("preserve", "golden"):
         raise ValueError(f"unknown mode: {mode!r} (preserve|golden)")
     spec_obj = _load(spec)
@@ -224,8 +224,8 @@ if __name__ == "__main__":
     ap.add_argument("--target-code", default=None)
     ap.add_argument("--gate", default=None)
     ap.add_argument("--approved", default=None, help="승인된 발산 id JSON(list) 경로")
-    ap.add_argument("--mode", default="preserve", choices=("preserve", "golden"),
-                    help="preserve(기본)=원본 보존 배포물(R1 WAIVED) / golden=§5~§6 골든 렌더(R1 측정)")
+    ap.add_argument("--mode", default="golden", choices=("preserve", "golden"),
+                    help="golden(기본)=§5~§6 골든 렌더(R1 측정) / preserve=원본 보존 배포물(R1 WAIVED)")
     ap.add_argument("--format", default="text", choices=("text", "json"))
     a = ap.parse_args()
     approved = None
