@@ -56,8 +56,7 @@ class BuildDeliverable(unittest.TestCase):
         self.assertIn(acc["summary"]["R2"], ("PASS", "FAIL"))
         # (4) 파이프라인이 유효한 3-상태로 완료(크래시 없음)
         self.assertIn(acc["verdict"], ("DONE", "BLOCKED", "FAIL"))
-        # (5) 측정 가능 포맷이므로 R1/R3/R4가 NA로 떨어지지 않음
-        self.assertNotEqual(acc["summary"]["R1"], "NA")
+        # (5) 측정 가능 포맷이므로 R4가 NA로 떨어지지 않음(R1은 (6)에서 WAIVED로 고정 검증)
         self.assertNotEqual(acc["summary"]["R4"], "NA")
         # (6) 보존 기본: R1은 WAIVED로 명시 기록되고, 배포물 = relabel(원천) byte-동일
         self.assertEqual(acc["summary"]["R1"], "WAIVED")
