@@ -452,7 +452,7 @@ class PolicyHTMLParser(HTMLParser):
         if self._in_pi_li:
             self._pi_li_buf.append(data)
         if self._in_pil_span:
-            # 간소화 스팬 — 별도 버퍼에 병행 수집(rules 추출용). content 축적とは독립.
+            # 간소화 스팬 — 별도 버퍼에 병행 수집(rules 추출용). content 축적과는 독립.
             self._pil_buf.append(data)
         if self._in_policy_item_content:
             # 본문 연속 누적 — _buf와 무관하게 모은다. 중첩 표 셀의 <td>/<th>가 _buf를

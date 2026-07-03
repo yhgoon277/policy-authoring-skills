@@ -79,6 +79,7 @@ class GoldenRegression(unittest.TestCase):
     def test_golden_sample_tables_captured(self):
         _, items, _ = dfv.parse_html(Path(GOLDEN_HTML))
         total = sum(len(i.detail_tables or []) for i in items)
-        # 원천 policy-detail-table 37개 중 35개가 generic(2개는 policy-detail-subtable).
-        # 중첩 깊이 추적 전에는 4개만 캡처됐으나 _pi_content_nest 도입 후 35개 캡처됨(측정값).
+        # 골든 샘플의 policy-detail-table 37개: 35개 표 태그 전부 캡처(subtable 0개),
+        # 나머지 2건은 CSS 선택자 텍스트(.policy-detail-table) — 표 태그는 35개 전부 캡처됨(측정값).
+        # 중첩 깊이 추적 전에는 4개만 캡처됐으나 _pi_content_nest 도입 후 35개 캡처됨.
         self.assertGreaterEqual(total, 30, "골든 샘플 PI 표가 30개 이상 캡처돼야 함(원천 policy-detail-table 35개 기대)")

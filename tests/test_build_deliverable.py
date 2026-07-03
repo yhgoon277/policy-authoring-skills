@@ -1,4 +1,4 @@
-"""build_deliverable 자기검증 — 보존 기본(배포물=relabel(원천)) · --golden 옵트인 splice 경로."""
+"""build_deliverable 자기검증 — 골든 기본(splice[5,6]) · --preserve 옵트인(배포물=relabel(원천))."""
 import _toolpath  # noqa: F401
 import json
 import os

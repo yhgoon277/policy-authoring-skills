@@ -14,6 +14,7 @@
 - **`rebuild_policy_from_source` PG 설명 원천 추출** — 원천 §6 정책 목록 표 '설명' 열 → `policy_groups[].description`(원천 정본 우선, spec 폴백). 배포쌍 JSON 설명 유실 해소(70/70).
 
 ### Fixed
+- **골든 렌더 §6 criteria 불릿 렌더 복원** — 파서 확장(표+불릿 동시 추출)과 렌더 가드 상호작용으로 표 보유 PI의 `criteria` 불릿이 전면 억제되던 회귀 수정. `criteria`(원천 추출 불릿)는 표 유무와 무관하게 항상 렌더(문장→불릿→표 순서). 레거시 `criteria_values`의 표-중복 억제는 유지.
 - **`run_acceptance` 자동 유도 target 미전달** — target 해소를 R5 단계에만 국한해 R1/R3/R4가 구코드 원천과 비교하던 버그(실측: 가짜 FN_DROPPED 86건). 해소 로직을 최상단으로 이동해 전 오라클에 전달.
 - **보존 경로 CRLF 보존** — 원천이 CRLF일 때 텍스트 모드 입출력이 LF로 정규화해 byte-동일이 깨지던 문제: 보존 경로를 `newline=""` 무번역 입출력으로 전환. 오라클도 보존 모드에선 줄끝 포함 비교.
 - **`rebuild` relabel 시 spec PG name/desc 폴백 사장** — relabel 경로에서 spec의 PG 이름/설명이 원천 추출값보다 우선되던 경로를 역전 수정(원천 정본 우선).

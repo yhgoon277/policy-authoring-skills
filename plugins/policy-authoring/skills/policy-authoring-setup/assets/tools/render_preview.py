@@ -498,6 +498,13 @@ def render_policy_details(spec):
                 parts.append(f'<div class="policy-stmt">{_e(rs)}</div>')
             if content and content != rs:
                 parts.append(f'<div class="policy-stmt">{_e(content)}</div>')
+            # 골든 가독 순서: 문장 → 기준 불릿 → 상세 표
+            # criteria(원천 추출 불릿): 표 유무와 무관하게 항상 렌더
+            cr = pi.get("criteria")
+            if cr and isinstance(cr, list):
+                cr_items = [c for c in cr if str(c).strip()]
+                if cr_items:
+                    parts.append('<ul class="policy-criteria">' + "".join(f"<li>{_e(c)}</li>" for c in cr_items) + "</ul>")
             for tbl in (pi.get("detail_tables") or []):
                 if not (isinstance(tbl, dict) and tbl.get("headers") and tbl.get("rows")):
                     continue
@@ -513,7 +520,8 @@ def render_policy_details(spec):
                 note = tbl.get("note")
                 if note and str(note).strip():
                     parts.append(f'<div class="pdt-note">{_e(note)}</div>')
-            cv = pi.get("criteria_values") or pi.get("criteria")
+            # criteria_values(레거시 수기 저작 중복 필드): 표 있으면 억제(이중 표시 방지)
+            cv = pi.get("criteria_values")
             if cv and isinstance(cv, list) and not pi.get("detail_tables"):
                 items = [c for c in cv if str(c).strip()]
                 if items:
