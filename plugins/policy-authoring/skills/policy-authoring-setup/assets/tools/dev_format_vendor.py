@@ -100,7 +100,7 @@ class PolicyDetailItem:
     # L1-rich: 본문 내부 구조(평면 content 외 구조화 필드 — 추가형, 기존 소비자 무영향)
     rules: list[str] = field(default_factory=list)            # pi-detail-list / policy-item-content <li>
     core_question: dict | None = None                         # {question, answers} (pi-core-question)
-    detail_tables: list[dict] = field(default_factory=list)   # policy-detail-subtable
+    detail_tables: list[dict] = field(default_factory=list)   # policy-detail-(sub)table
 
 
 class PolicyHTMLParser(HTMLParser):
@@ -380,7 +380,8 @@ class PolicyHTMLParser(HTMLParser):
             self._row = None
         elif tag == "table" and self._table_stack:
             t = self._table_stack.pop()
-            if "policy-detail-subtable" in (t.table_class or "").split() and (self._pi_detail_active or self._in_policy_item):
+            _dt_cls = set((t.table_class or "").split())
+            if ({"policy-detail-subtable", "policy-detail-table"} & _dt_cls) and (self._pi_detail_active or self._in_policy_item):
                 self._pi_detail_tables.append(self._table_to_detail(t))
             if t.rows or t.headers:
                 self.tables.append(t)
