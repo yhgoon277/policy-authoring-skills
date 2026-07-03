@@ -12,6 +12,8 @@ build_index(path) -> {
   "function_to_subfns":       {FN: [텍스트,...]}, # §5 기능 표 '세부 기능 구성'
   "function_to_pis":          {FN: [PI,...]},   # §5 '관련 정책 상세'/세부기능 내 PI
   "pg_to_pis":                {PG: [PI,...]},   # §6 정책 상세 (nc_html_link 견고 파서)
+  "pg_list_names":            {PG: [항목명,...]}, # §6 정책 목록 표 마지막 셀 <br> 분해
+  "pg_detail_names":          {PG: [name,...]},  # §6 정책 상세 PI name 목록(nc_html_link)
 }
 재사용: dev_format_vendor.parse_html(테이블 모델) · nc_html_link.parse_pg_pi(PG→PI).
 """
@@ -128,6 +130,23 @@ def _extract_function_tables(html, idx):
                 _add(idx["function_to_pis"], fn, _PI.findall(cells[pol_col]))
 
 
+def _pg_list_names(html_text):
+    """§6 '정책 목록' 표(PG행)에서 PG→항목명 리스트(마지막 셀 <br> 분해). 첫 등장 우선."""
+    out = {}
+    for tb in re.findall(r'<table class="[^"]*policy-list-table[^"]*".*?</table>', html_text, re.S):
+        for tr in re.findall(r"<tr>(.*?)</tr>", tb, re.S):
+            cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr, re.S)
+            if len(cells) < 2:
+                continue
+            m = re.search(r"\b(PG-[A-Z0-9\-]+)\b", cells[0])
+            if not m or m.group(1) in out:
+                continue
+            names = [re.sub(r"<[^>]+>", "", x).strip()
+                     for x in re.split(r"<br\s*/?>", cells[-1])]
+            out[m.group(1)] = [n for n in names if n]
+    return out
+
+
 def build_index(path):
     with open(path, encoding="utf-8") as f:
         html = f.read()
@@ -158,6 +177,8 @@ def build_index(path):
     # PG→PI: 견고 파서(6변형 + dev_format 폴백)
     pg_pi = nc_html_link.parse_pg_pi(html)
     idx["pg_to_pis"] = {pg: [x["id"] for x in lst] for pg, lst in pg_pi.items()}
+    idx["pg_list_names"] = _pg_list_names(html)
+    idx["pg_detail_names"] = {pg: [x.get("name", "") for x in lst] for pg, lst in pg_pi.items()}
     return idx
 
 

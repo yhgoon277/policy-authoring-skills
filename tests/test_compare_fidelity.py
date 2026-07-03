@@ -183,5 +183,34 @@ class PreserveMode(Base):
         self.assertIn("STYLE_POLICYLIST_PIID", self.invs(r2))    # golden은 기존 그대로
 
 
+def idx2(base=None, pg_list=None, pg_detail=None):
+    d = base or idx()
+    d["pg_list_names"] = pg_list or {}
+    d["pg_detail_names"] = pg_detail or {}
+    return d
+
+
+class PgListDetailMismatch(Base):
+    def test_mismatch_reported_once_as_med_r3(self):
+        i = idx2(pg_list={"PG-EVT-A-001": ["가", "나"], "PG-EVT-B-001": ["다"]},
+                 pg_detail={"PG-EVT-A-001": ["가"], "PG-EVT-B-001": ["다"]})
+        o = self.mk("o.html", "<h2>5.</h2>x", i)
+        g = self.mk("g.html", "<h2>5.</h2>x", i)
+        r = cf.compare(o, g)
+        f = [x for x in r["findings"] if x["invariant"] == "PG_LIST_DETAIL_MISMATCH"]
+        self.assertEqual(len(f), 1)                      # PG별이 아니라 단일 집계
+        self.assertEqual(f[0]["severity"], "MED")
+        self.assertEqual(f[0]["principle"], "R3")
+        self.assertIn("PG-EVT-A-001", f[0]["detail"])
+        self.assertEqual(r["verdict"], "PASS")           # MED는 FAIL 아님
+
+    def test_match_silent(self):
+        i = idx2(pg_list={"PG-EVT-A-001": ["가", "나"]}, pg_detail={"PG-EVT-A-001": ["나", "가"]})
+        o = self.mk("o.html", "x", i)
+        g = self.mk("g.html", "x", i)
+        r = cf.compare(o, g)
+        self.assertNotIn("PG_LIST_DETAIL_MISMATCH", self.invs(r))
+
+
 if __name__ == "__main__":
     unittest.main()

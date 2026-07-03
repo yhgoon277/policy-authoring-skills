@@ -49,6 +49,7 @@ _PRINCIPLE = {
     "PR_FN_LOST": "R3", "HEAD_PRESERVED": "R3", "FN_SOURCE_ORPHAN": "R3",
     "FN_ADDED": "R3", "PG_ADDED": "R3", "PI_ADDED": "R3",
     "STYLE_POLICYLIST_PIID": "R1", "FN_NO_POLICY": "R1", "FULL_PRESERVED": "R3",
+    "PG_LIST_DETAIL_MISMATCH": "R3",
 }
 
 
@@ -62,6 +63,9 @@ def _relabel_index(idx, target):
         out[k] = {r(key): [r(v) for v in vals] for key, vals in (idx.get(k) or {}).items()}
     # function_to_subfns: 키(FN)만 relabel, 값(세부기능 텍스트)은 그대로
     out["function_to_subfns"] = {r(key): list(vals) for key, vals in (idx.get("function_to_subfns") or {}).items()}
+    # pg_list_names / pg_detail_names: 키(PG)만 relabel, 값(이름 리스트)은 그대로
+    for k in ("pg_list_names", "pg_detail_names"):
+        out[k] = {r(key): list(vals) for key, vals in (idx.get(k) or {}).items()}
     return out
 
 
@@ -112,6 +116,16 @@ def compare(orig_html, gen_html, target_code=None, approved=None, mode="golden")
             miss = [p for p in pis if p not in g_pg[pg]]
             if miss:
                 add("PI_LOST", "HIGH", pg, f"정책항목 {len(miss)}개 손실", miss[:5])
+
+    # 원천 내부 불일치: §6 정책 목록 표 vs 정책 상세 구조의 PG 구성 상이 — 사람 확인(MED, 단일 집계)
+    def _nrm(s):
+        return re.sub(r"\s+", "", s or "").lower()
+    ln, dn = o.get("pg_list_names") or {}, o.get("pg_detail_names") or {}
+    mism = [pg for pg, names in ln.items()
+            if pg in dn and {_nrm(x) for x in names} != {_nrm(x) for x in dn[pg]}]
+    if mism:
+        add("PG_LIST_DETAIL_MISMATCH", "MED", "policy_list_vs_detail",
+            f"정책 목록표와 정책 상세의 PG 구성 불일치 {len(mism)}개(원천 내부 불일치 — 사람 확인): {mism[:5]}")
 
     # PR_FN_LOST — §4 프로세스→기능 관계 손실
     o_p2f, g_p2f = o["process_to_functions"], g["process_to_functions"]
