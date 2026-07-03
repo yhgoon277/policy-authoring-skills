@@ -22,8 +22,8 @@ HTML은 `render_preview.py`로 100% 생성한다(**수기 HTML 편집 금지** �
 ```
 python3 tools/build_deliverable.py --spec=<입력 spec.json> --source=<원천 HTML> \
     --out-dir=<dir> [--target-code=<R5코드>] [--gate=<커스텀 게이트; 미지정 시 번들 자동>] [--golden]
-# 기본(보존 모드): rebuild_policy_from_source → normalize_spec_to(R5) → relabel(원천) → run_acceptance
-# --golden 옵트인: rebuild → derive → normalize(R5) → render_preview(§0~§6) → splice_nc_html[5,6] → run_acceptance
+# 기본(보존 모드): rebuild_policy_from_source → fn_pi_derive → normalize_spec_to(R5) → render_preview(참고 preview) → relabel(원천)=배포물 → run_acceptance
+# --golden 옵트인: rebuild → derive → normalize(R5) → render_preview(§0~§6) → splice_nc_html[5,6] → run_acceptance(--mode=golden)
 ```
 - **DONE** = 5원칙 전부 PASS. **BLOCKED** = 결함 없으나 사람결정 대기(미지원 포맷·usecase_id 저작·정책상세 저작·원천 §4↔§5 불일치·발산 승인/제외·R5 도메인 미등록). **FAIL** = 배포물 원칙(R1/R3/R4/R5) RED(자동 수정 대상). **완료는 DONE(또는 BLOCKED 항목을 사람이 처리)** 후 확정.
 - **최종 산출물 = 5원칙을 통과한 HTML+JSON 한 쌍**(`<원천>_deliverable.html` + `<원천>_spec.json`, out-dir에 생성)(보존 모드에선 R1=WAIVED 포함 가능). 이 한 쌍이 이 스킬의 결론이다.

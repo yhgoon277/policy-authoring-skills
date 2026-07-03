@@ -128,6 +128,24 @@ class ThreeState(unittest.TestCase):
         self.assertEqual(r["verdict"], "FAIL")
         self.assertEqual(r["summary"]["R3"], "FAIL")
 
+    def test_mode_threads_to_compare(self):
+        # ra→cf mode 전달 회귀 가드: 끊기면 FULL_PRESERVED 보장이 조용히 사라짐
+        sp = self._spec({"meta": {}, "functions": [{"id": "FN-PAY-001"}]})
+        for mode, kw in (("preserve", {}), ("golden", {"mode": "golden"})):
+            with patch.object(ra.shi, "build_index", return_value=MEASURABLE), \
+                 patch.object(ra.cf, "compare", return_value={"findings": []}) as cmp, \
+                 patch.object(ra.ca, "audit", return_value={"verdict": "PASS", "findings": []}), \
+                 patch.object(ra, "_run_gate", return_value=("PASS", 0, "errors=0")), \
+                 patch.object(ra.dcm, "resolve_target", return_value="PAY"), \
+                 patch.object(ra.dcn, "check_r5",
+                              return_value={"verdict": "PASS", "bad_ids": [], "business_code_ok": True}):
+                ra.run("src.html", sp, "deliv.html", **kw)
+            self.assertEqual(cmp.call_args.kwargs.get("mode"), mode)
+
+    def test_unknown_mode_rejected(self):
+        with self.assertRaises(ValueError):
+            ra.run("src.html", self._spec({"meta": {}}), "deliv.html", mode="typo")
+
 
 if __name__ == "__main__":
     unittest.main()

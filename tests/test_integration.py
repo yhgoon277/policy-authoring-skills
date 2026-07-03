@@ -58,12 +58,12 @@ class BuildDeliverable(unittest.TestCase):
         self.assertIn(acc["verdict"], ("DONE", "BLOCKED", "FAIL"))
         # (5) 측정 가능 포맷이므로 R4가 NA로 떨어지지 않음(R1은 (6)에서 WAIVED로 고정 검증)
         self.assertNotEqual(acc["summary"]["R4"], "NA")
-        # (6) 보존 기본: R1은 WAIVED로 명시 기록되고, 배포물 = relabel(원천) byte-동일
+        # (6) 보존 기본: R1은 WAIVED로 명시 기록되고, 배포물 = relabel(원천) byte-동일(줄끝 포함)
         self.assertEqual(acc["summary"]["R1"], "WAIVED")
         import domain_code_normalize as dcn
-        with open(html, encoding="utf-8") as f:
+        with open(html, encoding="utf-8", newline="") as f:
             src_txt = f.read()
-        with open(r["deliverable"], encoding="utf-8") as f:
+        with open(r["deliverable"], encoding="utf-8", newline="") as f:
             self.assertEqual(f.read(), dcn.relabel_to(src_txt, r["target"]))
 
 

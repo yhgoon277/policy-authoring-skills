@@ -70,6 +70,8 @@ def _is_empty_subfn(vals):
 
 
 def compare(orig_html, gen_html, target_code=None, approved=None, mode="golden"):
+    if mode not in ("preserve", "golden"):
+        raise ValueError(f"unknown mode: {mode!r} (preserve|golden)")
     o = shi.build_index(orig_html)
     g = shi.build_index(gen_html)
     if target_code:
@@ -141,13 +143,14 @@ def compare(orig_html, gen_html, target_code=None, approved=None, mode="golden")
     # (R1, NC 평면텍스트→골든 리치). 따라서 (a) 헤드(§0~§4)는 원천과 바이트 동일해야 하고,
     # (b) 골든 스타일 검사는 §5+ 본문에만 적용(원천이 policy-list-table 등 클래스를 헤드의 액터/
     # 유즈케이스/프로세스 표에 재사용해도 오탐 금지).
+    nl = "" if mode == "preserve" else None
     try:
-        with open(gen_html, encoding="utf-8") as _f:
+        with open(gen_html, encoding="utf-8", newline=nl) as _f:
             gen_txt = _f.read()
     except (OSError, TypeError):
         gen_txt = ""
     try:
-        with open(orig_html, encoding="utf-8") as _f:
+        with open(orig_html, encoding="utf-8", newline=nl) as _f:
             orig_txt = _f.read()
     except (OSError, TypeError):
         orig_txt = ""

@@ -87,7 +87,9 @@ def build(input_spec, source_html, out_dir, target_code=None, gate=None, approve
     # 4) preview(도너 — 보존 모드에선 참고 산출물) → 5) 배포물 조립
     prev_path = os.path.join(out_dir, stem + "_preview.html")
     _render_preview(spec, prev_path)
-    base = open(source_html, encoding="utf-8").read()
+    # 보존 모드는 원천의 줄끝(CRLF 등)까지 보존 — 무번역(newline="") 입출력. 골든은 기존 그대로.
+    nl = None if golden else ""
+    base = open(source_html, encoding="utf-8", newline=nl).read()
     if target:
         base = dcn.relabel_to(base, target)
     if golden:
@@ -98,7 +100,7 @@ def build(input_spec, source_html, out_dir, target_code=None, gate=None, approve
         # 보존 모드(기본): 배포물 = relabel(원천) 그대로 — §0~§6 전체 원천 완전보존
         deliv = base
     deliv_path = os.path.join(out_dir, stem + "_deliverable.html")
-    with open(deliv_path, "w", encoding="utf-8") as f:
+    with open(deliv_path, "w", encoding="utf-8", newline=nl) as f:
         f.write(deliv)
 
     # 6) 5원칙 완료 게이트

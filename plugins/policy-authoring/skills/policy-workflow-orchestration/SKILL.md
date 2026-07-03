@@ -38,7 +38,7 @@ version: 0.4.0
 
 ## 완료 정의 — 5원칙 게이트 (플러그인이 스스로 검수·확정)
 작성 단위의 **완료는 5원칙 통합 게이트 `run_acceptance`(진입점 `build_deliverable`)가 판정**한다. 육안·부분 grep은 보조일 뿐 계약이 아니다.
-- **R1 골든 스타일**(--golden 옵트인 시 §5~§6 골든 렌더 측정; 기본 보존 모드에선 **WAIVED로 명시 기록**) · **R2 입력 게이트**(번들 `validate_nc_input` errors=0, 경로 없이 기본 실행) · **R3 원천 보존**(원천 HTML 정본 대비 무손실·무단발산 0·헤드 §0~§4 완전보존) · **R4 완료 정합**(JSON↔HTML) · **R5 도메인코드 현행화**(권위표 `domain_codes.md`→ 전 ID 세그먼트 relabel; 미등록 도메인은 `add_domain`으로 대화형 등록).
+- **R1 골든 스타일**(--golden 옵트인 시 §5~§6 골든 렌더 측정; 기본 보존 모드에선 **WAIVED로 명시 기록**) · **R2 입력 게이트**(번들 `validate_nc_input` errors=0, 경로 없이 기본 실행) · **R3 원천 보존**(원천 HTML 정본 대비 무손실·무단발산 0·헤드 §0~§4 완전보존; **보존 모드에선 헤드만이 아니라 전문서 byte-동일(FULL_PRESERVED, 줄끝 포함)**) · **R4 완료 정합**(JSON↔HTML) · **R5 도메인코드 현행화**(권위표 `domain_codes.md`→ 전 ID 세그먼트 relabel; 미등록 도메인은 `add_domain`으로 대화형 등록).
 - **3-상태**: **DONE**(5원칙 PASS; WAIVED(R1, 보존 모드)는 FAIL/BLOCKED 미산입) / **BLOCKED**(결함 없으나 사람결정 대기 — 미지원 포맷·usecase_id·정책상세 저작·원천 §4↔§5 불일치·발산 승인/제외·R5 도메인 미등록→대화형 등록) / **FAIL**(배포물 원칙 RED = 자동 수정 대상).
 - **최종 산출물 = 5원칙 통과 HTML+JSON 한 쌍**(`build_deliverable` out-dir의 `_deliverable.html` + `_spec.json`).
 - **BLOCKED은 실패가 아니라 사람 결정 요청** — `policy-html-json-check`/`decision_guide`로 처리 후 재검수. **원칙·목표가 바뀌면 이 게이트(오라클·도구)에 반드시 반영**한다(플러그인이 산출물). 플러그인 도구·오라클을 수정하면 `validate_plugin.py --check-oracles`로 5원칙 오라클 자기검증(`tests/`)을 통과해야 릴리스한다.
@@ -51,8 +51,8 @@ tools/overrides/<unit>.py 편집(PI 본문·applies_to·rule_type·decision_spec
 → python3 tools/build_spec.py         --config=policy_config.json --unit=<unit>
 → python3 tools/audit_id_integrity.py --config=policy_config.json --unit=<unit>   # STRUCTURAL 0 (exit 0) 필수
 → python3 tools/render_preview.py      --config=policy_config.json --unit=<unit>
-→ python3 tools/splice_nc_html.py      --unit=<unit> --base=<원천 HTML>           # --golden 경로: 배포본(§5·6 교체)
-→ python3 tools/run_acceptance.py      --source=<원천> --spec=<spec> --deliverable=<배포> [--mode=preserve|golden]  # 5원칙 DONE(기본 preserve, R2 게이트 기본 번들)
+→ python3 tools/splice_nc_html.py      --unit=<unit> --base=<원천 HTML>           # --golden 경로 전용(§5·6 교체); 기본 보존 경로는 splice 생략. splice 산출물은 반드시 run_acceptance --mode=golden으로 검수(기본 preserve와 혼용 금지)
+→ python3 tools/run_acceptance.py      --source=<원천> --spec=<spec> --deliverable=<배포> [--mode=preserve|golden]  # 5원칙 DONE(기본 preserve=R1 WAIVED, R2 게이트 기본 번들); --golden 시 R1 측정
 → 미리보기·spliced 육안 확인 → 선별 커밋
 ```
 > 원천 HTML 기반 신규 배포는 위를 묶은 **`build_deliverable.py`**(기본 보존 모드; `--golden`으로 splice 경로) 한 번으로 대체 가능.

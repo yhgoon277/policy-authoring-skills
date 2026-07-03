@@ -105,6 +105,8 @@ def _load(spec):
 
 def run(source_html, spec, deliverable_html, target_code=None, gate=None, approved=None,
         mode="preserve"):
+    if mode not in ("preserve", "golden"):
+        raise ValueError(f"unknown mode: {mode!r} (preserve|golden)")
     spec_obj = _load(spec)
     spec_path = spec if isinstance(spec, str) else None
     principles, decisions = {}, []
