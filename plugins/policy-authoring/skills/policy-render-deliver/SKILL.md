@@ -8,7 +8,7 @@ version: 0.4.0
 
 > **Claude/Codex에서**: spec JSON과 (배포 시) NC스튜디오 변환 HTML을 준비하고 적용을 요청하면 가이드대로 동작한다. `policy-*` 스킬을 함께 설치하는 것을 권장한다.
 
-HTML은 `render_preview.py`로 100% 생성한다(**수기 HTML 편집 금지** — json↔html 이격 원천 차단). 배포본은 원천 HTML에 preview의 리치 정책 상세를 **splice**해 골든급으로 만든다.
+HTML은 `render_preview.py`로 100% 생성한다(**수기 HTML 편집 금지** — json↔html 이격 원천 차단). **기본 배포본은 원천 HTML 완전보존 + R5 도메인코드 현행화(relabel)만** 수행한다(`--golden` 옵트인 시 preview의 리치 정책 상세를 §5·§6에 splice해 골든급으로 만든다).
 
 > **진실원천(R3)**: 기존/외부 HTML에서 편집을 시작하면 **그 원천 HTML이 진실원천**이다(짝 JSON은 없거나 stale일 수 있음). spec은 원천에서 재구성하며(`rebuild_policy_from_source`), 원천의 UC/PR/FN/PG/PI 매핑·콘텐츠를 **사용자 승인 없이 바꾸지 않는다**(발산 금지).
 

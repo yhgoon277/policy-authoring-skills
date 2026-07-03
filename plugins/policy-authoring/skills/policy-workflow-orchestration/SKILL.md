@@ -29,7 +29,7 @@ version: 0.4.0
 | 5 | enrich(NC 풀스키마·decision_spec 시드) + 감사 STRUCTURAL 0 | `policy-integrity-audit` |
 | 6 | 요구사항 커버리지 검토(매핑·품질 갭) | 방법론 문서(아래) |
 | 7 | NC 게이트 G2(요구↔노드)·G5(decision_spec 판정축) | `policy-nc-studio-gate` |
-| 8 | render(6섹션 HTML) + splice(배포본) | `policy-render-deliver` |
+| 8 | render(6섹션 HTML preview) + 배포본 빌드(기본=보존 모드; `--golden`=splice §5·§6) | `policy-render-deliver` |
 | 9 | **완료 게이트 — 5원칙 검수**(`build_deliverable`/`run_acceptance` → DONE) | `policy-render-deliver` |
 
 > 순서는 의존성 순(앞 phase 출력이 뒤 phase 입력). hub처럼 한 번 완주한 unit을 재편집할 때는 **FN 레이어·명칭·applies_to·PI group_id를 고정**하고 값 확정/배지 제거만 한다.
@@ -79,5 +79,5 @@ BL 보강·PI 배치 등 **큰 묶음**을 끝내면, 편집자와 분리된 **�
 - 계층·FN 분화(①) → `policy-hierarchy-decomposition` / 명칭·가독성(②) → `policy-naming-readability`.
 - applies_to·PI 본문·팩트체크(③) → `policy-detail-authoring`.
 - 감사 STRUCTURAL 0·롤업 재계산(④) → `policy-integrity-audit`.
-- render·splice 배포본 → `policy-render-deliver` / NC 게이트 G2·G5 → `policy-nc-studio-gate`.
+- render·배포본 빌드(기본=보존 모드; `--golden`=splice §5·§6) → `policy-render-deliver` / NC 게이트 G2·G5 → `policy-nc-studio-gate`.
 - 외부 HTML↔JSON 사전 검토·조건부 복원(인테이크·NC 라운드트립) → `policy-html-json-check`.
