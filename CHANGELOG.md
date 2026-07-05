@@ -2,6 +2,17 @@
 
 모든 주요 변경을 기록한다. 버전은 [SemVer](https://semver.org/lang/ko/)를 따른다.
 
+## [0.6.1] — 2026-07-05
+
+**R5 권위표 현행화: 주문/계약/가입 JOIN→ORD** — 사용자 현행화 xlsx(2026-07-05) 반영. 전수 비교 결과 코드 차이는 이 1건(방향 역전). 권위코드=ORD, 구권위 JOIN은 하위호환 alias로 유지해 v0.5.x~v0.6.0 산출물(JOIN relabel본)도 다음 빌드에서 자동 재현행화된다.
+
+### Changed
+- `domain_codes.md` — 주문/계약/가입 권위=ORD·alias=JOIN, 규칙 예시 `ORD`→`JOIN`을 `JOIN`→`ORD`로, EVTMSN/BENTPNT 비고 현행화(xlsx 원표기도 '/' 제거형으로 정리됨), 출처 2026-07-05.
+- `domain_code_map.py` — baked 폴백을 SSOT 미러로 동기화(`_BAKED_AUTHORITATIVE` JOIN→ORD, `_BAKED_CURRENT` ORD→JOIN).
+
+### Added
+- `tests/test_domain_code.py::test_baked_mirrors_md` — md 권위표↔baked 폴백 완전 동치 가드(표만 고치고 폴백을 빠뜨리는 회귀를 구조적으로 차단).
+
 ## [0.6.0] — 2026-07-03
 
 **R1 골든 렌더 기본 유지 + `--preserve` 옵트인 신설** — 기본 배포물은 **§5~§6 골든 splice(R1 측정)** 그대로 유지(팀 계약 불변). 특수 요구("원본과 동일") 대응 전용 **`--preserve` 경로**를 옵트인으로 신설: 배포물 = 원천 완전보존 + R5 relabel만, R1=WAIVED 명시 기록(몰래 PASS 아님), R2~R5 동일 측정. 실사용 사례: 이벤트미션 담당자의 "원본 그대로" 요구.
