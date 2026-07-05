@@ -2,13 +2,13 @@
 
 정책서 **도메인명 → 도메인코드** 권위 매핑. `domain_code_map.py`가 이 파일을 런타임에 읽어
 R5(도메인코드 현행화)의 target을 산출한다. **이 표가 단일 진실원천(SSOT)** 이며, 사람도 AI도
-여기서 직접 읽고 편집·확장한다(엑셀 불필요). 출처: `policy domain code.xlsx`(2026-07 기준).
+여기서 직접 읽고 편집·확장한다(엑셀 불필요). 출처: `policy domain code.xlsx`(2026-07-05 현행화 기준).
 
 규칙:
 - **권위코드**는 ID/SEG 정규식·CSS 선택자를 깨뜨리는 `/`를 제거한 형태로 적는다
   (예 `EVT/MSN`→`EVTMSN`, `BEN/TPNT`→`BENTPNT`). UC/PR/FN/PG/PI ID의 도메인세그먼트가 이 값이 된다.
 - **현행코드(alias)**: 입력 문서가 쓰는 레거시/현행 business_code. 쉼표로 여러 개. 이 코드로 모듈을
-  식별해 권위코드로 현행화한다(예 `AIS`→`AIA`, `MYI`→`INFO`, `ORD`→`JOIN`).
+  식별해 권위코드로 현행화한다(예 `AIS`→`AIA`, `MYI`→`INFO`, `JOIN`→`ORD`).
 - **미등록 도메인**: 표에 없는 도메인을 만나면 `domain_code_map.add_domain(...)`으로 한 행 추가하면
   즉시 인식된다(플러그인의 '대화형 등록'). 행 추가 = 새 `| 도메인명 | 권위코드 | 현행코드 | 비고 |` 한 줄.
 
@@ -21,13 +21,13 @@ R5(도메인코드 현행화)의 target을 산출한다. **이 표가 단일 진
 | AI Agent | AIA | AIS | 'AI검색'은 xlsx 미수록 → 사용자 결정으로 AIA 매핑 |
 | 추천 | RCM |  |  |
 | 데이터 트래킹 체계 | ANA |  |  |
-| 이벤트/미션 프로그램 | EVTMSN | EVT | 원표기 EVT/MSN('/' 제거) |
+| 이벤트/미션 프로그램 | EVTMSN | EVT | 구표기 EVT/MSN('/' 제거) — 현행 xlsx도 EVTMSN 표기 |
 | 외부 쿠폰 | CPN |  |  |
-| 멤버십 혜택/T 플러스포인트 | BENTPNT |  | 원표기 BEN/TPNT('/' 제거) |
+| 멤버십 혜택/T 플러스포인트 | BENTPNT |  | 구표기 BEN/TPNT('/' 제거) — 현행 xlsx도 BENTPNT 표기 |
 | 상품상세/담기 | PRD | PDD, PRD | PDD·PRD 혼재 → PRD로 정리(ID 충돌 검사) |
 | 카트/장바구니 | CART |  |  |
 | 할인/시뮬레이션 | SIM |  |  |
-| 주문/계약/가입 | JOIN | ORD |  |
+| 주문/계약/가입 | ORD | JOIN | 2026-07 현행화로 ORD가 권위(구권위 JOIN은 v0.5.x~v0.6.0 산출물 호환 alias) |
 | 선물주문 | GFT |  |  |
 | 상품변경 | CHG |  |  |
 | 결제 | PAY | PAY |  |

@@ -15,18 +15,25 @@ class TableLoad(unittest.TestCase):
         self.assertGreaterEqual(len(auth), 30, "권위표 md에서 도메인이 로드되어야 함")
         self.assertIn("결제", auth)
         self.assertEqual(auth["결제"], "PAY")
+        self.assertEqual(auth["주문/계약/가입"], "ORD")  # 2026-07 현행화: 권위=ORD
 
     def test_fallback_when_missing(self):
         auth, cur = dcm._load_table("/nonexistent/domain_codes.md")
         self.assertTrue(auth, "md 부재 시 baked 폴백으로 무크래시")
         self.assertEqual(auth.get("결제"), "PAY")
 
+    def test_baked_mirrors_md(self):
+        # 가드: baked 폴백은 SSOT(md)의 미러 — 표만 고치고 폴백을 빠뜨리는 실수를 차단
+        auth, cur = dcm._load_table()
+        self.assertEqual(auth, dcm._BAKED_AUTHORITATIVE)
+        self.assertEqual(cur, dcm._BAKED_CURRENT)
+
 
 class Resolve(unittest.TestCase):
     def test_current_alias(self):
         self.assertEqual(dcm.resolve_target("AIS"), "AIA")   # 브릿지 별칭
         self.assertEqual(dcm.resolve_target("MYI"), "INFO")
-        self.assertEqual(dcm.resolve_target("ORD"), "JOIN")
+        self.assertEqual(dcm.resolve_target("JOIN"), "ORD")  # 구권위 JOIN → 현행 ORD
         self.assertEqual(dcm.resolve_target("EVT"), "EVTMSN")
 
     def test_already_authoritative(self):
@@ -34,6 +41,7 @@ class Resolve(unittest.TestCase):
         self.assertEqual(dcm.resolve_target("INFO"), "INFO")
         self.assertEqual(dcm.resolve_target("PAY"), "PAY")
         self.assertEqual(dcm.resolve_target("DTC"), "DTC")
+        self.assertEqual(dcm.resolve_target("ORD"), "ORD")   # 2026-07 현행화로 ORD가 권위
 
     def test_unregistered(self):
         self.assertEqual(dcm.resolve_target("ZZZ"), "")      # 미등록 → 대화형 등록 유발
@@ -41,7 +49,9 @@ class Resolve(unittest.TestCase):
     def test_is_authoritative(self):
         self.assertTrue(dcm.is_authoritative("PAY"))
         self.assertTrue(dcm.is_authoritative("INFO"))
+        self.assertTrue(dcm.is_authoritative("ORD"))         # 2026-07 현행화로 권위
         self.assertFalse(dcm.is_authoritative("AIS"))        # 레거시 별칭은 권위코드 아님
+        self.assertFalse(dcm.is_authoritative("JOIN"))       # 구권위 → 이제 alias
         self.assertFalse(dcm.is_authoritative("ZZZ"))
 
     def test_code_for_name_strips_slash(self):
