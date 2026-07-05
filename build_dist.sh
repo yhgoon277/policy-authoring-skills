@@ -17,11 +17,11 @@ rm -f "$DIST"/*.zip   # regenerate all zips (keep *.txt HOWTOs)
 
 # individual claude.ai skill zips (exclude agents/, which is Codex-only)
 for s in "${SKILLS[@]}"; do
-  ( cd "$SK" && zip -rqX "$DIST/$s.zip" "$s" -x "$s/agents/*" )
+  ( cd "$SK" && zip -rqX "$DIST/$s.zip" "$s" -x "$s/agents/*" -x "*.DS_Store" -x "*__pycache__*" )
 done
 
 # Codex bundle: full skill folders incl agents/
-( cd "$SK" && zip -rqX "$DIST/policy-authoring-skills-codex.zip" "${SKILLS[@]}" )
+( cd "$SK" && zip -rqX "$DIST/policy-authoring-skills-codex.zip" "${SKILLS[@]}" -x "*.DS_Store" -x "*__pycache__*" )
 
 # all-in-one bundle: the individual zips + the upload howto
 INDIV=()

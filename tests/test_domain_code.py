@@ -24,6 +24,7 @@ class TableLoad(unittest.TestCase):
 
     def test_baked_mirrors_md(self):
         # 가드: baked 폴백은 SSOT(md)의 미러 — 표만 고치고 폴백을 빠뜨리는 실수를 차단
+        self.assertTrue(os.path.exists(dcm.table_path()), "SSOT md 부재 시 폴백끼리 자기비교로 무의미 통과 방지")
         auth, cur = dcm._load_table()
         self.assertEqual(auth, dcm._BAKED_AUTHORITATIVE)
         self.assertEqual(cur, dcm._BAKED_CURRENT)
