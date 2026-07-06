@@ -159,7 +159,9 @@ def rebuild(spec, source_html, target_code=None):
         }
         # 옵션 B: 원천에 없는 rich 필드만 입력 spec에서 가산 보강(덮어쓰지 않음)
         for f in ("customer_notice", "notice", "source_note", "field_review",
-                  "internal_integration", "applies_to", "criteria_values"):
+                  "internal_integration", "applies_to", "criteria_values",
+                  "decision_spec", "rule_type", "mockup_binding", "mockup_impact",
+                  "source_basis", "review_status", "applies_to_functions"):
             if src.get(f) and not pd.get(f):
                 pd[f] = src[f]
         pd.setdefault("source_note", "원천 HTML 정책서에서 복원")

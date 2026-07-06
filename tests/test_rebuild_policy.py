@@ -76,5 +76,36 @@ class RebuildWiring(unittest.TestCase):
         self.assertEqual(g["description"], "스펙설명")
 
 
+class EnrichFieldCarry(unittest.TestCase):
+    """F3: 가산 보강 목록에 NC G5/enrich 필드가 빠져 build_deliverable 산출 spec에서 소실."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.src = os.path.join(self.tmp, "src.html")
+        with open(self.src, "w", encoding="utf-8") as f:
+            f.write("<h4>1) 프로그램 유형 구분 정책 (PG-EVT-PROG-001)</h4>")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_g5_and_enrich_fields_carried(self):
+        item = NS(pi_id="PI-EVT-PROG-001-01", pg_id="PG-EVT-PROG-001",
+                  name="이벤트 유형 정의", content="", rules=[], detail_tables=[])
+        spec = {"policy_groups": [],
+                "policy_details": [{
+                    "id": "PI-EVT-PROG-001-01", "name": "이벤트 유형 정의",
+                    "decision_spec": {"criteria_values": ["유형 A/B"]},
+                    "rule_type": "criteria",
+                    "mockup_binding": "MB-1", "mockup_impact": "MI-1",
+                    "source_basis": "원문 §2", "review_status": "검토완료",
+                    "applies_to_functions": ["FN-EVT-001"]}]}
+        with patch.object(rb.dfv, "parse_html", return_value=([], [item], None)):
+            out = rb.rebuild(spec, self.src)
+        pd = out["policy_details"][0]
+        for f in ("decision_spec", "rule_type", "mockup_binding", "mockup_impact",
+                  "source_basis", "review_status", "applies_to_functions"):
+            self.assertTrue(pd.get(f), f"{f} 소실 — 가산 보강 목록 누락")
+
+
 if __name__ == "__main__":
     unittest.main()
