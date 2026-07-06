@@ -36,7 +36,9 @@ def _walk(obj, target):
     if isinstance(obj, list):
         return [_walk(x, target) for x in obj]
     if isinstance(obj, dict):
-        return {k: _walk(v, target) for k, v in obj.items()}
+        # 키도 relabel — trace_matrix 등 ID-keyed 매핑의 키↔값 정합(F4)
+        return {(relabel_to(k, target) if isinstance(k, str) else k): _walk(v, target)
+                for k, v in obj.items()}
     return obj
 
 

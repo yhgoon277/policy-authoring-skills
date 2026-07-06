@@ -147,5 +147,25 @@ class ActorPrefixRelabel(unittest.TestCase):
         self.assertEqual(r5["verdict"], "PASS", r5["bad_ids"])
 
 
+class DictKeyRelabel(unittest.TestCase):
+    """F4: _walk가 dict 값만 relabel하고 키를 건너뛰어 trace_matrix 키(구코드)↔값(신코드) 오염."""
+
+    def test_trace_matrix_keys_relabelled(self):
+        spec = {"meta": {"business_code": "CS"},
+                "trace_matrix": {
+                    "uc_to_process": {"UC-CS-CS-01": ["PR-CS-HUB-001"]},
+                    "policy_detail_to_function": {"PI-CS-ACC-01-01": ["FN-CS-HUB-001"]}}}
+        out = dcn.normalize_spec_to(spec, "CSHUB")
+        tm = out["trace_matrix"]
+        self.assertEqual(tm["uc_to_process"], {"UC-CSHUB-CS-01": ["PR-CSHUB-HUB-001"]})
+        self.assertEqual(tm["policy_detail_to_function"], {"PI-CSHUB-ACC-01-01": ["FN-CSHUB-HUB-001"]})
+
+    def test_plain_keys_untouched(self):
+        out = dcn.normalize_spec_to(
+            {"process_details": {"평문 키": {"UC-CS-CS-01": "값 PR-CS-HUB-001"}}}, "CSHUB")
+        self.assertEqual(out["process_details"],
+                         {"평문 키": {"UC-CSHUB-CS-01": "값 PR-CSHUB-HUB-001"}})
+
+
 if __name__ == "__main__":
     unittest.main()
