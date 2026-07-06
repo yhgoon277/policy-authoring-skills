@@ -212,12 +212,45 @@ class PgListDetailMismatch(Base):
         self.assertNotIn("PG_LIST_DETAIL_MISMATCH", self.invs(r))
 
     def test_empty_detail_names_not_compared(self):
-        # 이름 추출 실패(빈 집합)는 비교 불능 — 가짜 불일치 금지
+        # 이름 추출 실패(빈 집합)는 비교 불능 — 가짝 불일치 금지
         i = idx2(pg_list={"PG-EVT-A-001": ["가", "나"]}, pg_detail={"PG-EVT-A-001": []})
         o = self.mk("o.html", "x", i)
         g = self.mk("g.html", "x", i)
         r = cf.compare(o, g)
         self.assertNotIn("PG_LIST_DETAIL_MISMATCH", self.invs(r))
+
+
+class PgListDetailDecorations(Base):
+    """F5: 렌더 장식(목록 ID 접미·상세 검토 배지)만 다른 동일 구성을 불일치로 오탐했던 버그."""
+
+    def test_id_suffix_and_field_review_badge_stripped(self):
+        i = idx2(pg_list={"PG-EVT-A-001": ["접근 허용 범위 (PI-EVT-A-001-01)",
+                                           "권한 제한 대상 (PI-EVT-A-001-02)"]},
+                 pg_detail={"PG-EVT-A-001": ["접근 허용 범위",
+                                             "권한 제한 대상 BSS/현업 검토 필요"]})
+        o = self.mk("o.html", "x", i)
+        g = self.mk("g.html", "x", i)
+        r = cf.compare(o, g)
+        self.assertNotIn("PG_LIST_DETAIL_MISMATCH", self.invs(r))
+
+    def test_internal_integration_badge_stripped(self):
+        i = idx2(pg_list={"PG-EVT-A-001": ["다채널 게시 (PI-EVT-A-001-03)"]},
+                 pg_detail={"PG-EVT-A-001": ["다채널 게시 내부 통합 필요"]})
+        o = self.mk("o.html", "x", i)
+        g = self.mk("g.html", "x", i)
+        r = cf.compare(o, g)
+        self.assertNotIn("PG_LIST_DETAIL_MISMATCH", self.invs(r))
+
+    def test_real_mismatch_still_detected(self):
+        # 장식 제거 후에도 실제 구성 차이(PI 누락)는 계속 검출 — 검출력 보존 가드
+        i = idx2(pg_list={"PG-EVT-A-001": ["가 (PI-EVT-A-001-01)", "나 (PI-EVT-A-001-02)"]},
+                 pg_detail={"PG-EVT-A-001": ["가"]})
+        o = self.mk("o.html", "x", i)
+        g = self.mk("g.html", "x", i)
+        r = cf.compare(o, g)
+        f = [x for x in r["findings"] if x["invariant"] == "PG_LIST_DETAIL_MISMATCH"]
+        self.assertEqual(len(f), 1)
+        self.assertEqual(f[0]["severity"], "MED")
 
 
 if __name__ == "__main__":

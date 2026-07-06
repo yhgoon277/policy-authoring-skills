@@ -118,10 +118,23 @@ def compare(orig_html, gen_html, target_code=None, approved=None, mode="golden")
                 add("PI_LOST", "HIGH", pg, f"정책항목 {len(miss)}개 손실", miss[:5])
 
     # 원천 내부 불일치: §6 정책 목록 표 vs 정책 상세 구조의 PG 구성 상이 — 사람 확인(MED, 단일 집계)
+    # 렌더 장식은 비교 전 제거(F5): 목록 표의 ID 접미 `(PI-…)` · 상세 제목의 검토 배지.
     def _nrm(s):
         return re.sub(r"\s+", "", s or "").lower()
+    _decor = re.compile(r"\(pi-[a-z0-9\-]+\)$")
+    _badges = ("bss/현업검토필요", "내부통합필요")
+    def _pikey(s):
+        t = _decor.sub("", _nrm(s))
+        changed = True
+        while changed:
+            changed = False
+            for b in _badges:
+                if t.endswith(b):
+                    t = t[: -len(b)]
+                    changed = True
+        return t
     def _nset(xs):
-        return {_nrm(x) for x in xs if _nrm(x)}
+        return {_pikey(x) for x in xs if _pikey(x)}
     ln, dn = o.get("pg_list_names") or {}, o.get("pg_detail_names") or {}
     mism = [pg for pg, names in ln.items()
             if pg in dn and _nset(names) and _nset(dn[pg]) and _nset(names) != _nset(dn[pg])]
