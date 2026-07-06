@@ -137,6 +137,8 @@ def rebuild(spec, source_html, target_code=None):
         pg_names = {relabel(k): v for k, v in pg_names.items()}
         pg_descs = {relabel(k): v for k, v in pg_descs.items()}
 
+    # 이름 충돌 주의: base-name이 같은 PI가 spec에 공존하면 last-write-wins로 하나만 남는다
+    # (hub 121-PI 실측 충돌 0으로 수용). 중복 이름이 생기는 spec은 ID 기반 매칭으로 교체할 것.
     in_pi_by_name = {_match_key(p.get("name", "")): p for p in (spec.get("policy_details") or []) if p.get("name")}
     spec_pg = {(relabel(g.get("id")) if relabel else g.get("id")): g
                for g in (spec.get("policy_groups") or [])}
