@@ -10,10 +10,11 @@
 - `domain_code_normalize._PREFIX` — 액터 `AC-` 접두 누락: relabel_to는 액터 ID를 건너뛰는데 check_r5는 계속 FAIL로 무는 비정합(F2). `AC` 추가(2토막 `AC-001` 모듈-로컬 스킴은 기존처럼 비대상).
 - `domain_code_normalize._walk` — dict **키** 미relabel: `trace_matrix`·`process_role_by_usecase` 등 ID-keyed 매핑에서 키(구코드)↔값(신코드) 오염(F4, 통합허브 실측 233키). 키도 relabel.
 - `rebuild_policy_from_source.rebuild` — 가산 보강 목록에 `decision_spec`·`rule_type`·`mockup_binding`·`mockup_impact`·`source_basis`·`review_status`·`applies_to_functions` 누락: build_deliverable 산출 spec에서 NC G5/enrich 필드 소실(F3). 가산 원칙 그대로 목록만 확장.
+- `rebuild_policy_from_source` 이름 크로스워크 — 입력 spec의 bake ID 접미 `명 (PI-…)`·원천 제목의 검토 배지를 정규화하지 않아 장식이 다르면 이름 매칭 전건 미스 → 가산 보강(F3) 무력화(F6, 통합허브 실측 121/121 미스·rich 필드 전부 소실). `_match_key` 장식 제거 매칭으로 해소.
 - `compare_fidelity` PG 목록↔상세 대조 — 렌더 장식(목록 표 `(PI-…)` ID 접미·상세 제목 `BSS/현업 검토 필요`/`내부 통합 필요` 배지)을 정규화하지 않아 장식만 다른 동일 구성을 `PG_LIST_DETAIL_MISMATCH`로 전수 오탐(F5, 통합허브 실측 23/23 → `source_inconsistency` BLOCKED). `_pikey` 정규화로 장식 제거 후 비교(실제 구성 차이 검출력은 가드 테스트로 보존).
 
 ### Added
-- `tests/test_domain_code.py::ActorPrefixRelabel`·`DictKeyRelabel`, `tests/test_rebuild_policy.py::EnrichFieldCarry`, `tests/test_compare_fidelity.py::PgListDetailDecorations` — 네 수정의 회귀 가드.
+- `tests/test_domain_code.py::ActorPrefixRelabel`·`DictKeyRelabel`, `tests/test_rebuild_policy.py::EnrichFieldCarry`·`DecoratedNameCrosswalk`, `tests/test_compare_fidelity.py::PgListDetailDecorations` — 다섯 수정의 회귀 가드.
 
 ## [0.6.1] — 2026-07-05
 

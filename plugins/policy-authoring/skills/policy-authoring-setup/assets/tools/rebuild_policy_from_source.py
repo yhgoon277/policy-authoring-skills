@@ -24,6 +24,24 @@ def _norm(s):
     return re.sub(r"\s+", " ", (s or "")).strip().lower()
 
 
+_ID_SUFFIX = re.compile(r"\(\s*PI-[A-Za-z0-9\-]+\s*\)")
+_BADGE_TXT = ("bss/현업 검토 필요", "내부 통합 필요")
+
+
+def _match_key(s):
+    """이름 매칭 키(F6): 렌더 장식 제거 — 입력 spec의 bake ID 접미 `(PI-…)`,
+    원천 제목의 검토 배지 접미. 장식 유무가 달라도 같은 PI로 매칭."""
+    k = _norm(_ID_SUFFIX.sub("", s or ""))
+    changed = True
+    while changed:
+        changed = False
+        for b in _BADGE_TXT:
+            if k.endswith(b):
+                k = k[: -len(b)].strip()
+                changed = True
+    return k
+
+
 _PG_HEADING = re.compile(r'<h[1-6][^>]*>(.*?)</h[1-6]>', re.S)
 # 리뷰 마커: [검증필요]·[검토필요]·[기술검토필요]·[추가작성필요]·[현업검토필요] 등 [...필요]
 _REVIEW = re.compile(r'\[[^\]]*필요\]')
@@ -119,7 +137,7 @@ def rebuild(spec, source_html, target_code=None):
         pg_names = {relabel(k): v for k, v in pg_names.items()}
         pg_descs = {relabel(k): v for k, v in pg_descs.items()}
 
-    in_pi_by_name = {_norm(p.get("name", "")): p for p in (spec.get("policy_details") or []) if p.get("name")}
+    in_pi_by_name = {_match_key(p.get("name", "")): p for p in (spec.get("policy_details") or []) if p.get("name")}
     spec_pg = {(relabel(g.get("id")) if relabel else g.get("id")): g
                for g in (spec.get("policy_groups") or [])}
 
@@ -132,7 +150,7 @@ def rebuild(spec, source_html, target_code=None):
             continue
         if not pg:                       # dfv pg_id 누락 → 견고 파서 폴백(원본 코드로 조회)
             pg = pi_to_pg.get(pid, "")
-        src = in_pi_by_name.get(_norm(getattr(it, "name", "")), {})
+        src = in_pi_by_name.get(_match_key(getattr(it, "name", "")), {})
         if relabel:
             pid, pg = relabel(pid), relabel(pg)
         content = (getattr(it, "content", "") or "").strip()

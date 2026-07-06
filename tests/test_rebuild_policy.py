@@ -107,5 +107,48 @@ class EnrichFieldCarry(unittest.TestCase):
             self.assertTrue(pd.get(f), f"{f} 소실 — 가산 보강 목록 누락")
 
 
+class DecoratedNameCrosswalk(unittest.TestCase):
+    """F6: 입력 spec의 bake ID 접미·원천 제목의 검토 배지로 이름 매칭 전건 미스 —
+    가산 보강(F3)이 실전에서 무력화되던 버그."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.src = os.path.join(self.tmp, "src.html")
+        with open(self.src, "w", encoding="utf-8") as f:
+            f.write("<h4>1) 프로그램 유형 구분 정책 (PG-EVT-PROG-001)</h4>")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_baked_and_badged_names_match(self):
+        item = NS(pi_id="PI-EVT-PROG-001-01", pg_id="PG-EVT-PROG-001",
+                  name="권한 제한 대상 BSS/현업 검토 필요",
+                  content="", rules=[], detail_tables=[])
+        spec = {"policy_groups": [],
+                "policy_details": [{
+                    "id": "PI-EVT-PROG-001-01",
+                    "name": "권한 제한 대상 (PI-EVT-PROG-001-01)",
+                    "decision_spec": {"criteria_values": ["범위 A"]},
+                    "customer_notice": "고객 안내문"}]}
+        with patch.object(rb.dfv, "parse_html", return_value=([], [item], None)):
+            out = rb.rebuild(spec, self.src)
+        pd = out["policy_details"][0]
+        self.assertTrue(pd.get("decision_spec"), "F6: 장식 차이로 이름 매칭 실패")
+        self.assertTrue(pd.get("customer_notice"), "F6: 장식 차이로 이름 매칭 실패")
+
+    def test_internal_integration_badge_match(self):
+        item = NS(pi_id="PI-EVT-PROG-001-02", pg_id="PG-EVT-PROG-001",
+                  name="다채널 게시 내부 통합 필요",
+                  content="", rules=[], detail_tables=[])
+        spec = {"policy_groups": [],
+                "policy_details": [{
+                    "id": "PI-EVT-PROG-001-02",
+                    "name": "다채널 게시 (PI-EVT-PROG-001-02)",
+                    "rule_type": "criteria"}]}
+        with patch.object(rb.dfv, "parse_html", return_value=([], [item], None)):
+            out = rb.rebuild(spec, self.src)
+        self.assertTrue(out["policy_details"][0].get("rule_type"))
+
+
 if __name__ == "__main__":
     unittest.main()
