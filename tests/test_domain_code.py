@@ -123,5 +123,29 @@ class AddDomain(unittest.TestCase):
         self.assertEqual(auth["가상 신규 도메인"], "NEWD")
 
 
+class ActorPrefixRelabel(unittest.TestCase):
+    """F2: AC- 액터 접두가 _PREFIX에 없어 relabel_to는 건너뛰고 check_r5는 무는 비정합."""
+
+    def test_ac_prefix_relabels(self):
+        self.assertEqual(dcn.relabel_to("AC-CS-01", "CSHUB"), "AC-CSHUB-01")
+
+    def test_module_local_ac_untouched(self):
+        # 2토막 모듈-로컬 스킴은 도메인코드 비대상 — 기존 ACT-001 규칙과 동일
+        self.assertEqual(dcn.relabel_to("AC-001", "CSHUB"), "AC-001")
+        self.assertEqual(dcn.relabel_to("ACT-001", "CSHUB"), "ACT-001")
+
+    def test_word_boundary_no_false_match(self):
+        self.assertEqual(dcn.relabel_to("MAC-CS-01", "CSHUB"), "MAC-CS-01")
+
+    def test_normalize_then_check_r5_consistent(self):
+        spec = {"meta": {"business_code": "CS"},
+                "actors": [{"id": "AC-CS-01"}, {"id": "AC-CS-02"}],
+                "usecases": [{"id": "UC-CS-CS-01"}]}
+        out = dcn.normalize_spec_to(spec, "CSHUB")
+        self.assertEqual([a["id"] for a in out["actors"]], ["AC-CSHUB-01", "AC-CSHUB-02"])
+        r5 = dcn.check_r5(out, "CSHUB")
+        self.assertEqual(r5["verdict"], "PASS", r5["bad_ids"])
+
+
 if __name__ == "__main__":
     unittest.main()

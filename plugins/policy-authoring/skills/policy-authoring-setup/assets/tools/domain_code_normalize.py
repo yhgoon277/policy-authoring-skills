@@ -13,8 +13,8 @@ T-R5 오라클: check_r5(spec, target) → 세그먼트 != target 인 ID 목록(
 import copy
 import re
 
-# 치환 대상 ID 접두(엔티티만 — 본문/설명의 임의 대문자열 오염 방지)
-_PREFIX = r"(?:UC|US|PR|FN|PG|PI|POL|ST|ACT|TM)"
+# 치환 대상 ID 접두(엔티티만 — 본문/설명의 임의 대문자열 오염 방지). ACT를 AC 앞에(명시 순서).
+_PREFIX = r"(?:UC|US|PR|FN|PG|PI|POL|ST|ACT|AC|TM)"
 # PREFIX-SEG-rest 형태에서 SEG만 캡처(뒤에 -... 가 반드시 옴; applies_to '...#3' 접미는 보존)
 _ID_SEG = re.compile(r"\b(" + _PREFIX + r"-)([A-Z0-9]+)(-[A-Z0-9\-]+)")
 
