@@ -212,7 +212,7 @@ class PgListDetailMismatch(Base):
         self.assertNotIn("PG_LIST_DETAIL_MISMATCH", self.invs(r))
 
     def test_empty_detail_names_not_compared(self):
-        # 이름 추출 실패(빈 집합)는 비교 불능 — 가짝 불일치 금지
+        # 이름 추출 실패(빈 집합)는 비교 불능 — 가짜 불일치 금지
         i = idx2(pg_list={"PG-EVT-A-001": ["가", "나"]}, pg_detail={"PG-EVT-A-001": []})
         o = self.mk("o.html", "x", i)
         g = self.mk("g.html", "x", i)
