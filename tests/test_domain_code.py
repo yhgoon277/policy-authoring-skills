@@ -176,6 +176,10 @@ class FcAndTwoPartRelabel(unittest.TestCase):
     def test_two_part_document_id_relabels(self):
         self.assertEqual(dcn.relabel_to("POL-MYI", "INFO"), "POL-INFO")
 
+    def test_bare_two_part_entity_id_relabels(self):
+        # 숫자접미 없는 2토막 엔티티 ID도 relabel(POL-MYI 문서ID가 대표 사례) — 의도된 동작.
+        self.assertEqual(dcn.relabel_to("PG-OLD", "PAY"), "PG-PAY")
+
     def test_numeric_seg_untouched(self):
         self.assertEqual(dcn.relabel_to("ACT-001", "INFO"), "ACT-001")
         self.assertEqual(dcn.relabel_to("PM-20", "INFO"), "PM-20")
