@@ -2,6 +2,14 @@
 
 모든 주요 변경을 기록한다. 버전은 [SemVer](https://semver.org/lang/ko/)를 따른다.
 
+## v0.6.4 — full-document 골든 렌더 오라클 정합 (2026-07-09)
+`policy_full_document_from_html` 아티팩트(골든 HTML에서 JSON 역재구성, source==deliverable) 검수 시 5원칙 게이트가 **오탐 FAIL**을 내던 오라클·파서 갭 3건 수정. 담당자 문서는 정상이며 게이트 판정만 교정(주문/계약/가입 v0.45 한쌍 검수에서 발견, 적대적 검토로 확증).
+- **nc_html_link**: data-속성 변형⑦ 추가 — `<a data-pi-id data-policy-id>`로 §6 PG→PI 그룹핑 복원. MARKER('정책 항목 상세')·헤딩-id가 없는 full-document 골든 렌더에서 `pg_to_pis`가 `PG-UNKNOWN` 1개로 뭉치던 것 → 실 PG 복원(76/287). 속성 없는 포맷은 무영향(회귀 0).
+- **source_html_index**: 기능 행의 `data-related-pi-ids` 속성으로 FN→PI 보강 — `<tr>` 속성을 cell 파서가 놓쳐 `function_to_pis`가 비어 `FN_NO_POLICY` 오탐(241)이던 것 해소.
+- **domain_code_normalize**: 도메인세그(2번째 토큰)가 엔티티 접두(UC/PR/FN/PG/PI…)이면 relabel·검출에서 제외 — 자유서술 meta의 'PG-PI-FN crosslink' 같은 관계 토큰을 잔존코드로 오탐하던 R5 false positive 차단(`check_r5`+`relabel_to` 양쪽; relabel의 조용한 산문 손상도 방지).
+- **run_acceptance**: source==deliverable(자기동일) 감지 → R3=WAIVED 명시 — 독립 원천 없는 자기비교의 '공허한 PASS'를 정직 표기.
+- tests 98→107(신규 `test_nc_html_link.py` + domain_code·source_html_index·run_acceptance 보강). `validate_plugin --check-oracles` PASS.
+
 ## v0.6.3 — R5 도메인코드 종합 강화 (2026-07-09)
 - check_r5 전수 재귀 스캔(scan_residual_segs): document_id·final_check·trace_matrix 등 전 필드 커버(기존 _ID_KEYS 8필드 한정 사각 해소).
 - _PREFIX에 FC 추가(final_check 3토막 ID 커버).

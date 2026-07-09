@@ -42,6 +42,12 @@ PI_ANCHOR = re.compile(r'id="(PI-[A-Z0-9\-]+)"')
 PI_TEXT = re.compile(r'\((PI-[A-Z0-9\-]+)\)')
 TAG = re.compile(r'<[^>]+>')
 
+# 변형 ⑦(data-속성): <a data-pi-id="PI-.." data-policy-id="PG-..">이름 (PI-..)</a> 가 PG 귀속을
+# 명시하는 full-document 골든 렌더(주문계약 v0.45 등) — MARKER·헤딩-id 없이 이 속성으로 그룹핑.
+A_TAG = re.compile(r'<a\b(?P<attrs>[^>]*)>(?P<txt>.*?)</a>', re.S)
+DATA_PI = re.compile(r'\bdata-pi-id="(PI-[A-Z0-9\-]+)"')
+DATA_PG = re.compile(r'\bdata-(?:parent-)?policy-id="(PG-[A-Z0-9\-]+)"')
+
 # 구조형 한 항목: pi-title(이름 + 앵커 id) … pi-body(ul) 까지
 POLICY_ITEM = re.compile(
     r'class="pi-title">\s*[•\-\s]*(?P<name>.*?)\s*\(<a[^>]*id="(?P<id>PI-[A-Z0-9\-]+)"'
@@ -136,6 +142,29 @@ def _devfmt_mapping(html):
     return mapping
 
 
+def _dataattr_mapping(html):
+    """변형 ⑦: <a data-pi-id data-policy-id>이름 (PI-..)</a> 로 PG→PI 복원.
+
+    각 PI를 그것을 처음 선언한 <a>(둘 다 보유)의 PG에 귀속시킨다. 속성이 없는 포맷은
+    빈 매핑 → 상위 선택 로직에서 무영향(회귀 0)."""
+    mapping = OrderedDict()
+    seen = set()
+    for m in A_TAG.finditer(html):
+        a = m.group("attrs")
+        pi, pg = DATA_PI.search(a), DATA_PG.search(a)
+        if not (pi and pg) or pi.group(1) in seen:
+            continue
+        seen.add(pi.group(1))
+        name = PI_TEXT.sub("", _text(m.group("txt"))).strip()  # '이름 (PI-..)'→'이름'
+        mapping.setdefault(pg.group(1), []).append({"id": pi.group(1), "name": name, "body": ""})
+    return mapping
+
+
+def _real_pg(mapping):
+    """PG-UNKNOWN 아닌 실 PG를 하나라도 잡았는가(그룹핑 성공 여부)."""
+    return any(pg != "PG-UNKNOWN" for pg in (mapping or {}))
+
+
 def parse_pg_pi(html):
     """HTML 문자열 → OrderedDict PG -> [{id,name,body}]."""
     mapping = OrderedDict()
@@ -188,10 +217,17 @@ def parse_pg_pi(html):
     # ⑤ 견고 파서 폴백: 레거시가 더 적게(또는 0) 찾았으면 dev_format_vendor 결과로 교체.
     #   dev ≥ legacy 가 검증돼 있어(추가분은 실존 PI) 회귀 없이 커버리지만 넓힌다.
     legacy_total = sum(len(v) for v in mapping.values())
+    best = mapping
     dev_map = _devfmt_mapping(html)
     if dev_map is not None and sum(len(v) for v in dev_map.values()) > legacy_total:
-        return dev_map
-    return mapping
+        best = dev_map
+    # ⑦ data-속성 변형: legacy·dev가 실 PG 그룹핑에 실패(전부 PG-UNKNOWN/빈맵)했을 때만,
+    #    data-policy-id가 실 PG를 복원하면 채택. 실 PG를 이미 잡은 포맷은 무영향(회귀 0).
+    if not _real_pg(best):
+        data_map = _dataattr_mapping(html)
+        if _real_pg(data_map):
+            best = data_map
+    return best
 
 
 def parse_file(path):

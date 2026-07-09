@@ -183,6 +183,27 @@ class ThreeState(unittest.TestCase):
         self.assertEqual(r["decisions"], [])
         self.assertEqual(r["verdict"], "DONE")
 
+    def test_self_source_waives_r3(self):
+        # source==deliverable(자기동일)이면 독립 원천이 없어 R3(원천보존)를 의미있게 측정 불가.
+        # 공허한 PASS 대신 WAIVED로 정직 표기. R1/R2/R4/R5 통과면 종합은 여전히 DONE.
+        spec = {"meta": {"business_code": "PAY"}, "functions": [{"id": "FN-PAY-001"}]}
+        sp = self._spec(spec)
+        with patch.object(ra.shi, "build_index", return_value=MEASURABLE), \
+             patch.object(ra.cf, "compare", return_value={"findings": []}), \
+             patch.object(ra.ca, "audit", return_value={"verdict": "PASS", "findings": []}), \
+             patch.object(ra, "_run_gate", return_value=("PASS", 0, "errors=0")), \
+             patch.object(ra.dcn, "check_r5",
+                          return_value={"verdict": "PASS", "bad_ids": [], "business_code_ok": True}):
+            r = ra.run("same.html", sp, "same.html")   # source == deliverable
+        self.assertEqual(r["summary"]["R3"], "WAIVED")
+        self.assertEqual(r["verdict"], "DONE")
+
+    def test_distinct_source_still_measures_r3(self):
+        # 회귀 가드: source≠deliverable이면 R3는 종전대로 실측(WAIVED 아님)
+        r = self._run(cf_findings=[{"invariant": "FN_DROPPED", "severity": "HIGH",
+                                    "principle": "R3", "key": "FN-PAY-002", "detail": "loss"}])
+        self.assertEqual(r["summary"]["R3"], "FAIL")
+
 
 if __name__ == "__main__":
     unittest.main()

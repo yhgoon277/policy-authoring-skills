@@ -24,6 +24,10 @@ _ID_SEG = re.compile(r"\b(" + _PREFIX + r"-)([A-Z]+)(-[A-Z0-9\-]+)")
 # (?![A-Z-]): 뒤에 대문자나 하이픈이 오면 매치 거부 — 3토막 POL-<code>-<rest>에서 백트래킹으로
 # 부분 매치(POL-INF 등)되던 버그를 막는다. _ID_SEG가 3토막 POL- 을 이미 처리함.
 _DOCID_RE = re.compile(r"\bPOL-([A-Z]+)(?![A-Z-])")
+# 도메인세그(2번째 토큰)가 엔티티 접두(UC/PR/FN/PG/PI…) '자체'이면 도메인코드가 아니라
+# 관계 서술 토큰(예: 자유서술 meta의 'PG-PI-FN crosslink' — seg='PI'). 도메인코드는 엔티티
+# 접두와 겹치지 않으므로, 이런 토큰은 relabel·검출 대상에서 제외한다(prose 오탐·조용한 손상 차단).
+_ENTITY_SEGS = frozenset(("UC", "US", "PR", "FN", "PG", "PI", "POL", "ST", "ACT", "AC", "TM", "FC"))
 
 
 def seg_of(id_str):
@@ -33,8 +37,13 @@ def seg_of(id_str):
 
 
 def relabel_to(s, target):
-    """문자열 내 엔티티 ID(3토막)의 도메인세그 + 문서ID(POL-<code>)를 target으로 치환."""
-    s = _ID_SEG.sub(lambda m: m.group(1) + target + m.group(3), s or "")
+    """문자열 내 엔티티 ID(3토막)의 도메인세그 + 문서ID(POL-<code>)를 target으로 치환.
+    단 seg가 엔티티 접두(PG-PI-FN 등 관계 서술 토큰)이면 도메인코드가 아니므로 보존."""
+    def _seg_sub(m):
+        if m.group(2) in _ENTITY_SEGS:
+            return m.group(0)
+        return m.group(1) + target + m.group(3)
+    s = _ID_SEG.sub(_seg_sub, s or "")
     return _DOCID_RE.sub(lambda m: "POL-" + target, s)
 
 
@@ -69,7 +78,7 @@ def scan_residual_segs(obj, target):
 
     def _scan_text(s):
         for m in _ID_SEG.finditer(s or ""):
-            if m.group(2) != target:
+            if m.group(2) != target and m.group(2) not in _ENTITY_SEGS:
                 found[m.group(1) + m.group(2) + m.group(3)] = m.group(2)
         for m in _DOCID_RE.finditer(s or ""):
             if m.group(1) != target:

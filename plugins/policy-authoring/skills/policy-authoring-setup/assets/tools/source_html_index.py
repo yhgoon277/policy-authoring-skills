@@ -130,6 +130,25 @@ def _extract_function_tables(html, idx):
                 _add(idx["function_to_pis"], fn, _PI.findall(cells[pol_col]))
 
 
+# full-document 골든 렌더(주문계약 v0.45 등): 기능 행이 data-related-pi-ids="PI-..,PI-.." 속성으로
+# FN→PI를 명시. 위 표 파서는 <tr> 내용(cell)만 읽어 이 속성을 놓치므로 별도 패스로 보강한다.
+_FN_RELPI_TAG = re.compile(r'<[a-zA-Z]+\b([^>]*\bdata-related-pi-ids="[^"]*"[^>]*)>')
+_ATTR_FN_ID = re.compile(r'\b(?:data-function-id|id)="(FN-[A-Z0-9\-]+)"')
+_ATTR_RELPI = re.compile(r'\bdata-related-pi-ids="([^"]*)"')
+
+
+def _extract_fn_related_pi(html, idx):
+    """기능 행의 data-related-pi-ids 속성으로 FN→PI 보강(속성 없는 포맷은 무영향 — 회귀 0)."""
+    for m in _FN_RELPI_TAG.finditer(html):
+        attrs = m.group(1)
+        fnm, rel = _ATTR_FN_ID.search(attrs), _ATTR_RELPI.search(attrs)
+        if not (fnm and rel):
+            continue
+        pis = [p for p in re.split(r"[,\s]+", rel.group(1)) if p.startswith("PI-")]
+        idx["function_to_pis"].setdefault(fnm.group(1), [])
+        _add(idx["function_to_pis"], fnm.group(1), pis)
+
+
 def _pg_list_names(html_text):
     """§6 '정책 목록' 표(PG행)에서 PG→항목명 리스트(마지막 셀 <br> 분해). 첫 등장 우선."""
     out = {}
@@ -173,6 +192,7 @@ def build_index(path):
 
     # FN→세부기능·FN→PI: raw HTML(<br> 보존) 직접 파싱
     _extract_function_tables(html, idx)
+    _extract_fn_related_pi(html, idx)  # data-related-pi-ids 속성 보강
 
     # PG→PI: 견고 파서(6변형 + dev_format 폴백)
     pg_pi = nc_html_link.parse_pg_pi(html)

@@ -182,6 +182,13 @@ class FcAndTwoPartRelabel(unittest.TestCase):
         self.assertEqual(dcn.relabel_to("PG-ALERT", "BIL"), "PG-ALERT")
         self.assertEqual(dcn.relabel_to("PG-OLD", "PAY"), "PG-OLD")
 
+    def test_relationship_token_preserved(self):
+        # 2번째 토큰이 엔티티 접두(PG-PI-FN의 'PI')면 도메인코드가 아님 — relabel 대상 아님.
+        # 자유서술 'PG-PI-FN crosslink'가 'PG-ORD-FN'으로 조용히 손상되는 것을 막는다.
+        self.assertEqual(dcn.relabel_to("PG-PI-FN crosslink", "ORD"), "PG-PI-FN crosslink")
+        # 진짜 도메인세그(OLD)는 여전히 relabel
+        self.assertEqual(dcn.relabel_to("FN-OLD-001-01", "ORD"), "FN-ORD-001-01")
+
     def test_numeric_seg_untouched(self):
         self.assertEqual(dcn.relabel_to("ACT-001", "INFO"), "ACT-001")
         self.assertEqual(dcn.relabel_to("PM-20", "INFO"), "PM-20")
@@ -236,6 +243,25 @@ class CheckR5Comprehensive(unittest.TestCase):
         spec = {"meta": {"business_code": "BIL"},
                 "policy_groups": [{"id": "PG-AMOUNT"}, {"id": "PG-ALERT"}]}
         self.assertEqual(dcn.check_r5(spec, "BIL")["verdict"], "PASS")
+
+    def test_prose_relationship_token_not_flagged(self):
+        # ID 모양이나 2번째 토큰이 엔티티 접두(PG-PI-FN의 'PI')인 관계 서술 토큰은 잔존
+        # 도메인코드가 아님 — 도메인코드는 엔티티 접두(UC/PR/FN/PG/PI…)와 겹치지 않으므로,
+        # 자유서술 meta(structure_enrichment.purpose 등)의 'PG-PI-FN crosslink' 오탐을 차단.
+        spec = {"meta": {"business_code": "ORD",
+                         "structure_enrichment": {
+                             "purpose": "HTML policy detail structure and PG-PI-FN crosslink enrichment."}},
+                "policy_groups": [{"id": "PG-ORD-ENTRY-001"}]}
+        r = dcn.check_r5(spec, "ORD")
+        self.assertEqual(r["verdict"], "PASS", r["bad_ids"])
+        self.assertNotIn("PG-PI-FN", r["bad_ids"])
+
+    def test_real_residual_still_flagged_near_entity_prefix(self):
+        # 가드: 엔티티 접두 스킵이 진짜 잔존코드까지 놓치면 안 됨. seg가 도메인코드(OLD)면 검출 유지.
+        spec = {"meta": {"business_code": "ORD"}, "functions": [{"id": "FN-OLD-001-01"}]}
+        r = dcn.check_r5(spec, "ORD")
+        self.assertEqual(r["verdict"], "FAIL")
+        self.assertIn("FN-OLD-001-01", r["bad_ids"])
 
     def test_three_token_pol_id_not_corrupted(self):
         # POL-<code>-<rest>(정책상세 대체 ID)는 _ID_SEG로만 처리,

@@ -44,6 +44,18 @@ def _measurable(idx):
     return bool((idx or {}).get("function_to_subfns") or (idx or {}).get("pg_to_pis"))
 
 
+def _same_artifact(a, b):
+    """source==deliverable(자기동일) 여부 — 경로 동일 또는 내용 동일. 독립 원천 부재 판별용.
+    산출 HTML이 곧 진실원천인 아티팩트(policy_full_document_from_html 등)에서 발생."""
+    if a == b:
+        return True
+    try:
+        with open(a, encoding="utf-8") as fa, open(b, encoding="utf-8") as fb:
+            return fa.read() == fb.read()
+    except OSError:
+        return False
+
+
 def _seg_of_spec(spec):
     """spec의 대표 엔티티에서 현재 도메인세그먼트 추출(R5 target 자동유도용)."""
     for k in ("functions", "processes", "policy_groups", "usecases"):
@@ -121,6 +133,7 @@ def run(source_html, spec, deliverable_html, target_code=None, gate=None, approv
     except Exception:  # noqa: BLE001
         o_idx = {}
     measurable = _measurable(o_idx)
+    self_source = _same_artifact(source_html, deliverable_html)
 
     # R1 + R3 : compare_fidelity (principle 태그로 버킷팅)
     if measurable:
@@ -140,16 +153,22 @@ def run(source_html, spec, deliverable_html, target_code=None, gate=None, approv
                                 "findings": [_slim(f) for f in r1]}
             for f in r1_med:  # 완료게이트(FN_NO_POLICY 등) = 저작 필요 결정
                 decisions.append({"principle": "R1", "kind": "authoring_needed", "detail": f["detail"]})
-        principles["R3"] = {"verdict": "FAIL" if any(f["severity"] == "HIGH" for f in r3_loss) else "PASS",
-                            "findings": [_slim(f) for f in r3]}
-        # R3 손실(FN_DROPPED·HEAD 등)=자동수정 대상 결함→FAIL. R3 발산(*_ADDED)=입력전용
-        # 승인/제외 사람결정→decisions(BLOCKED). (fabrication 아님: 원천 부재 콘텐츠 유입)
-        for f in r3_div:  # 원천 부재 엔티티 유입 = 승인 또는 제외 사람결정
-            decisions.append({"principle": "R3", "kind": "source_divergence",
-                              "detail": f"{f['invariant']}: {f['detail']} (승인 시 approved 등재, 아니면 제외)"})
-        for f in r3_loss:  # 원천 내부 불일치(FN_SOURCE_ORPHAN 등 MED) = 사람 확인
-            if f["severity"] == "MED":
-                decisions.append({"principle": "R3", "kind": "source_inconsistency", "detail": f["detail"]})
+        if self_source:
+            # 자기동일 — 독립 원천 없음. 손실·발산 검사가 구조적으로 불가(공허) → WAIVED 명시.
+            principles["R3"] = {"verdict": "WAIVED", "findings": [],
+                                "note": ("source==deliverable(자기동일) — 독립 원천 없음, "
+                                         "원천보존 의미측정 불가(공허 PASS 대신 WAIVED)")}
+        else:
+            principles["R3"] = {"verdict": "FAIL" if any(f["severity"] == "HIGH" for f in r3_loss) else "PASS",
+                                "findings": [_slim(f) for f in r3]}
+            # R3 손실(FN_DROPPED·HEAD 등)=자동수정 대상 결함→FAIL. R3 발산(*_ADDED)=입력전용
+            # 승인/제외 사람결정→decisions(BLOCKED). (fabrication 아님: 원천 부재 콘텐츠 유입)
+            for f in r3_div:  # 원천 부재 엔티티 유입 = 승인 또는 제외 사람결정
+                decisions.append({"principle": "R3", "kind": "source_divergence",
+                                  "detail": f"{f['invariant']}: {f['detail']} (승인 시 approved 등재, 아니면 제외)"})
+            for f in r3_loss:  # 원천 내부 불일치(FN_SOURCE_ORPHAN 등 MED) = 사람 확인
+                if f["severity"] == "MED":
+                    decisions.append({"principle": "R3", "kind": "source_inconsistency", "detail": f["detail"]})
 
         # R3 콘텐츠 충실도: 원천 정책상세 표가 spec detail_tables로 캡처됐는가(파서 격차 신호 — 사람 결정)
         try:
