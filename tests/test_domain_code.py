@@ -221,6 +221,14 @@ class CheckR5Comprehensive(unittest.TestCase):
         self.assertEqual({d["id"] for d in got}, {"POL-MYI", "FC-MYI-QA-X"})
         self.assertEqual({d["seg"] for d in got}, {"MYI"})
 
+    def test_trace_matrix_idkey_flagged(self):
+        # trace_matrix가 ID-키 맵일 때 키(구코드)도 검출, 값(현행코드)은 미검출
+        spec = {"meta": {"business_code": "INFO"},
+                "trace_matrix": {"UC-MYI-CS-01": ["FN-INFO-001"]}}
+        r = dcn.check_r5(spec, "INFO")
+        self.assertIn("UC-MYI-CS-01", r["bad_ids"])
+        self.assertNotIn("FN-INFO-001", r["bad_ids"])
+
 
 if __name__ == "__main__":
     unittest.main()
