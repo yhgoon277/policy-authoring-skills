@@ -2,6 +2,14 @@
 
 모든 주요 변경을 기록한다. 버전은 [SemVer](https://semver.org/lang/ko/)를 따른다.
 
+## v0.6.3 — R5 도메인코드 종합 강화 (2026-07-09)
+- check_r5 전수 재귀 스캔(scan_residual_segs): document_id·final_check·trace_matrix 등 전 필드 커버(기존 _ID_KEYS 8필드 한정 사각 해소).
+- _PREFIX에 FC 추가(final_check 3토막 ID 커버).
+- 정책서(문서) ID 특례: _DOCID_RE로 POL-<code> 2토막을 relabel·검사(POL-MYI→POL-INFO), spec JSON·배포 HTML 양쪽.
+- run_acceptance R5가 배포 HTML 잔존 도메인코드도 결합 판정(check_r5_html).
+- 안전(중요): 기능형 2토막 ID(PG-AMOUNT·PG-ALERT 등)는 보존 — _ID_SEG 3토막 필수 + 문서ID 특례로 손상·충돌 방지. 재베이스라인 10모듈 전부 normalize 후 clean.
+- 나의가입정보 v0.65 검수에서 드러난 POL-MYI·FC-MYI 잔재 사각 근인 해소. tests: test_domain_code 21→35.
+
 ## [0.6.2] — 2026-07-06
 
 **R5 relabel 정합 3수정** — 고객센터_통합허브(CS→CSHUB) 현행화 실전 적용에서 발견(failing-test-first).
