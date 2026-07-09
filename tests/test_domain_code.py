@@ -189,5 +189,38 @@ class FcAndTwoPartRelabel(unittest.TestCase):
         self.assertEqual(dcn.relabel_to("AC-CS-01", "CSHUB"), "AC-CSHUB-01")
 
 
+class CheckR5Comprehensive(unittest.TestCase):
+    """전수 재귀: document_id·final_check·trace_matrix 등 전 필드 검출."""
+
+    def test_document_id_flagged(self):
+        spec = {"meta": {"business_code": "INFO", "document_id": "POL-MYI"},
+                "functions": [{"id": "FN-INFO-001"}]}
+        r = dcn.check_r5(spec, "INFO")
+        self.assertEqual(r["verdict"], "FAIL")
+        self.assertIn("POL-MYI", r["bad_ids"])
+
+    def test_final_check_flagged(self):
+        spec = {"meta": {"business_code": "INFO"},
+                "final_check": [{"id": "FC-MYI-QA-CASE"}]}
+        self.assertIn("FC-MYI-QA-CASE", dcn.check_r5(spec, "INFO")["bad_ids"])
+
+    def test_trace_matrix_value_flagged(self):
+        spec = {"meta": {"business_code": "INFO"},
+                "trace_matrix": [{"item_id": "PI-MYI-SUM-001-01"}]}
+        self.assertIn("PI-MYI-SUM-001-01", dcn.check_r5(spec, "INFO")["bad_ids"])
+
+    def test_clean_spec_passes(self):
+        spec = {"meta": {"business_code": "INFO", "document_id": "POL-INFO"},
+                "final_check": [{"id": "FC-INFO-QA-CASE"}],
+                "functions": [{"id": "FN-INFO-001"}],
+                "actors": [{"id": "ACT-001"}]}
+        self.assertEqual(dcn.check_r5(spec, "INFO")["verdict"], "PASS")
+
+    def test_scan_returns_id_and_seg(self):
+        got = dcn.scan_residual_segs({"a": "POL-MYI", "b": ["FC-MYI-QA-X"]}, "INFO")
+        self.assertEqual({d["id"] for d in got}, {"POL-MYI", "FC-MYI-QA-X"})
+        self.assertEqual({d["seg"] for d in got}, {"MYI"})
+
+
 if __name__ == "__main__":
     unittest.main()
