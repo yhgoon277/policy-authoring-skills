@@ -15,9 +15,13 @@ import re
 
 # 치환 대상 ID 접두(엔티티만 — 본문/설명의 임의 대문자열 오염 방지). ACT를 AC 앞에(명시 순서).
 # FC=final_check(검수 ID) 추가. SEG는 알파(도메인코드)만 → 숫자세그(ACT-001·PM-20 모듈-로컬)
-# 는 자동 제외. rest는 선택(POL-MYI 같은 2토막 문서ID도 매치). '#3' 등 접미는 group3에 보존.
+# 는 자동 제외. '#3' 등 접미는 group3에 보존.
 _PREFIX = r"(?:UC|US|PR|FN|PG|PI|POL|ST|ACT|AC|TM|FC)"
-_ID_SEG = re.compile(r"\b(" + _PREFIX + r"-)([A-Z]+)((?:-[A-Z0-9\-]+)?)")
+# 엔티티 ID(3토막+)의 도메인세그(2번째 토큰) 매치 — group3(-rest) 필수.
+# 2토막은 여기서 안 잡는다(PG-AMOUNT 등 기능형 2토막 손상 방지). SEG는 알파만(숫자세그 ACT-001 제외).
+_ID_SEG = re.compile(r"\b(" + _PREFIX + r"-)([A-Z]+)(-[A-Z0-9\-]+)")
+# 정책서(문서) ID 전용: POL-<도메인코드> 2토막. 이것만 2토막 relabel/검사 대상(뒤에 -세그 없음).
+_DOCID_RE = re.compile(r"\bPOL-([A-Z]+)(?!-)")
 
 
 def seg_of(id_str):
@@ -27,8 +31,9 @@ def seg_of(id_str):
 
 
 def relabel_to(s, target):
-    """문자열 내 모든 엔티티 ID의 도메인세그먼트를 target으로 치환."""
-    return _ID_SEG.sub(lambda m: m.group(1) + target + m.group(3), s or "")
+    """문자열 내 엔티티 ID(3토막)의 도메인세그 + 문서ID(POL-<code>)를 target으로 치환."""
+    s = _ID_SEG.sub(lambda m: m.group(1) + target + m.group(3), s or "")
+    return _DOCID_RE.sub("POL-" + target, s)
 
 
 def _walk(obj, target):
@@ -70,6 +75,9 @@ def scan_residual_segs(obj, target):
         for m in _ID_SEG.finditer(s or ""):
             if m.group(2) != target:
                 found[m.group(1) + m.group(2) + m.group(3)] = m.group(2)
+        for m in _DOCID_RE.finditer(s or ""):
+            if m.group(1) != target:
+                found["POL-" + m.group(1)] = m.group(1)
 
     def _walk_scan(o):
         if isinstance(o, str):

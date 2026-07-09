@@ -176,9 +176,11 @@ class FcAndTwoPartRelabel(unittest.TestCase):
     def test_two_part_document_id_relabels(self):
         self.assertEqual(dcn.relabel_to("POL-MYI", "INFO"), "POL-INFO")
 
-    def test_bare_two_part_entity_id_relabels(self):
-        # 숫자접미 없는 2토막 엔티티 ID도 relabel(POL-MYI 문서ID가 대표 사례) — 의도된 동작.
-        self.assertEqual(dcn.relabel_to("PG-OLD", "PAY"), "PG-PAY")
+    def test_functional_two_part_preserved(self):
+        # 기능형 2토막 ID(2번째 토큰이 도메인코드 아님)는 relabel 안 함 — 손상/충돌 방지.
+        self.assertEqual(dcn.relabel_to("PG-AMOUNT", "BIL"), "PG-AMOUNT")
+        self.assertEqual(dcn.relabel_to("PG-ALERT", "BIL"), "PG-ALERT")
+        self.assertEqual(dcn.relabel_to("PG-OLD", "PAY"), "PG-OLD")
 
     def test_numeric_seg_untouched(self):
         self.assertEqual(dcn.relabel_to("ACT-001", "INFO"), "ACT-001")
@@ -228,6 +230,12 @@ class CheckR5Comprehensive(unittest.TestCase):
         r = dcn.check_r5(spec, "INFO")
         self.assertIn("UC-MYI-CS-01", r["bad_ids"])
         self.assertNotIn("FN-INFO-001", r["bad_ids"])
+
+    def test_functional_two_part_not_flagged(self):
+        # 기능형 2토막 PG(PG-AMOUNT 등)는 잔존코드가 아니므로 R5 FAIL 유발 안 함
+        spec = {"meta": {"business_code": "BIL"},
+                "policy_groups": [{"id": "PG-AMOUNT"}, {"id": "PG-ALERT"}]}
+        self.assertEqual(dcn.check_r5(spec, "BIL")["verdict"], "PASS")
 
 
 class CheckR5Html(unittest.TestCase):
