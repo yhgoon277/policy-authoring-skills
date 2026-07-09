@@ -193,11 +193,19 @@ def run(source_html, spec, deliverable_html, target_code=None, gate=None, approv
     else:
         principles["R4"] = {"verdict": "NA", "note": "미지원 포맷(파싱 불가)"}
 
-    # R5 : 도메인코드 현행화
+    # R5 : 도메인코드 현행화 (JSON 전 필드 + 배포 HTML)
     if target:
         chk = dcn.check_r5(spec_obj, target)
-        principles["R5"] = {"verdict": chk["verdict"], "target": target, "resolved": how,
-                            "bad_ids": chk["bad_ids"][:5], "business_code_ok": chk["business_code_ok"]}
+        try:
+            with open(deliverable_html, encoding="utf-8") as f:
+                _deliv_txt = f.read()
+        except OSError:
+            _deliv_txt = ""
+        html_bad = dcn.check_r5_html(_deliv_txt, target)["bad_ids"] if _deliv_txt else []
+        all_bad = chk["bad_ids"] + [f"{b} (HTML)" for b in html_bad]
+        r5_ok = not all_bad and chk["business_code_ok"]
+        principles["R5"] = {"verdict": "PASS" if r5_ok else "FAIL", "target": target, "resolved": how,
+                            "bad_ids": all_bad[:8], "business_code_ok": chk["business_code_ok"]}
     else:
         cur_seg = _seg_of_spec(spec_obj) or "?"
         principles["R5"] = {"verdict": "NA", "note": f"target 코드 미결(domain_codes.md에 '{cur_seg}' 미등록)"}

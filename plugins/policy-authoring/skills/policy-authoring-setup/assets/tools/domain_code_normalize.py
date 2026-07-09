@@ -96,6 +96,12 @@ def check_r5(spec, target):
             "verdict": "PASS" if not bad and bc_ok else "FAIL"}
 
 
+def check_r5_html(html, target):
+    """배포 HTML 텍스트에서 도메인세그 != target 인 엔티티 ID 수집(문서ID POL-MYI 등)."""
+    bad = [d["id"] for d in scan_residual_segs(html or "", target)]
+    return {"bad_ids": bad, "verdict": "PASS" if not bad else "FAIL"}
+
+
 if __name__ == "__main__":
     import json
     import sys

@@ -230,5 +230,19 @@ class CheckR5Comprehensive(unittest.TestCase):
         self.assertNotIn("FN-INFO-001", r["bad_ids"])
 
 
+class CheckR5Html(unittest.TestCase):
+    """배포 HTML의 잔존 도메인코드(문서ID POL-MYI 등) 검출."""
+
+    def test_html_residual_flagged(self):
+        html = '<table><tr><td>정책서 ID</td><td>POL-MYI</td></tr></table>'
+        r = dcn.check_r5_html(html, "INFO")
+        self.assertEqual(r["verdict"], "FAIL")
+        self.assertIn("POL-MYI", r["bad_ids"])
+
+    def test_html_current_codes_pass(self):
+        html = '<td>POL-INFO</td><td>FN-INFO-CUS-001</td>'
+        self.assertEqual(dcn.check_r5_html(html, "INFO")["verdict"], "PASS")
+
+
 if __name__ == "__main__":
     unittest.main()
