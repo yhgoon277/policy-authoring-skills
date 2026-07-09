@@ -237,6 +237,14 @@ class CheckR5Comprehensive(unittest.TestCase):
                 "policy_groups": [{"id": "PG-AMOUNT"}, {"id": "PG-ALERT"}]}
         self.assertEqual(dcn.check_r5(spec, "BIL")["verdict"], "PASS")
 
+    def test_three_token_pol_id_not_corrupted(self):
+        # POL-<code>-<rest>(정책상세 대체 ID)는 _ID_SEG로만 처리,
+        # _DOCID_RE가 백트래킹으로 손상(POL-INF→POL-INFOO 등) / 오탐시키지 않음
+        self.assertEqual(dcn.relabel_to("POL-MBR-TERM-001-01", "PAY"), "POL-PAY-TERM-001-01")
+        self.assertEqual(dcn.scan_residual_segs("POL-PAY-TERM-001-01", "PAY"), [])
+        # 2토막 문서ID는 여전히 처리
+        self.assertEqual(dcn.relabel_to("POL-MYI", "INFO"), "POL-INFO")
+
 
 class CheckR5Html(unittest.TestCase):
     """배포 HTML의 잔존 도메인코드(문서ID POL-MYI 등) 검출."""

@@ -8,7 +8,11 @@
 - 정책서(문서) ID 특례: _DOCID_RE로 POL-<code> 2토막을 relabel·검사(POL-MYI→POL-INFO), spec JSON·배포 HTML 양쪽.
 - run_acceptance R5가 배포 HTML 잔존 도메인코드도 결합 판정(check_r5_html).
 - 안전(중요): 기능형 2토막 ID(PG-AMOUNT·PG-ALERT 등)는 보존 — _ID_SEG 3토막 필수 + 문서ID 특례로 손상·충돌 방지. 재베이스라인 10모듈 전부 normalize 후 clean.
-- 나의가입정보 v0.65 검수에서 드러난 POL-MYI·FC-MYI 잔재 사각 근인 해소. tests: test_domain_code 21→35.
+- 나의가입정보 v0.65 검수에서 드러난 POL-MYI·FC-MYI 잔재 사각 근인 해소. tests: test_domain_code 21→36.
+- `_DOCID_RE` 백트래킹 손상 수정: `(?!-)` → `(?![A-Z-])` — `POL-MBR-TERM-001-01` 같은 3토막 POL- ID에서 부분 매치(`POL-MBR`)→이중 코드(`POL-MBRR`) 버그 해소. _ID_SEG가 3토막을 이미 올바르게 처리함.
+- `_DOCID_RE.sub` lambda 형식으로 변경(backslash-safe, _ID_SEG.sub 관용구 통일).
+- 사용처 없는 내부 헬퍼 `_has_domain_seg` 제거(check_r5는 scan_residual_segs를 직접 사용).
+- scan_residual_segs docstring에 _DOCID_RE 스캔 명시.
 
 ## [0.6.2] — 2026-07-06
 

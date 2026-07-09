@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """domain_code_normalize — R5 도메인코드 현행화: ID 도메인세그먼트 relabel + T-R5 오라클.
 
-한 모듈의 모든 엔티티 ID(UC/PR/FN/PG/PI/POL/ST/ACT/TM 접두)와 그 참조(applies_to·
+한 모듈의 모든 엔티티 ID(UC/PR/FN/PG/PI/POL/ST/ACT/TM/FC 접두)와 그 참조(applies_to·
 related_*·policy_id·group_id·process_id·usecase_id·items[].id 등 spec 곳곳의 ID 문자열)의
 **도메인세그먼트(2번째 토큰)를 목표 코드로 일괄 치환**한다. 관계구조(그래프)는 그대로,
 라벨만 바뀐다(relationship-preserving relabel). meta.business_code도 목표 코드로 설정.
@@ -21,7 +21,9 @@ _PREFIX = r"(?:UC|US|PR|FN|PG|PI|POL|ST|ACT|AC|TM|FC)"
 # 2토막은 여기서 안 잡는다(PG-AMOUNT 등 기능형 2토막 손상 방지). SEG는 알파만(숫자세그 ACT-001 제외).
 _ID_SEG = re.compile(r"\b(" + _PREFIX + r"-)([A-Z]+)(-[A-Z0-9\-]+)")
 # 정책서(문서) ID 전용: POL-<도메인코드> 2토막. 이것만 2토막 relabel/검사 대상(뒤에 -세그 없음).
-_DOCID_RE = re.compile(r"\bPOL-([A-Z]+)(?!-)")
+# (?![A-Z-]): 뒤에 대문자나 하이픈이 오면 매치 거부 — 3토막 POL-<code>-<rest>에서 백트래킹으로
+# 부분 매치(POL-INF 등)되던 버그를 막는다. _ID_SEG가 3토막 POL- 을 이미 처리함.
+_DOCID_RE = re.compile(r"\bPOL-([A-Z]+)(?![A-Z-])")
 
 
 def seg_of(id_str):
@@ -33,7 +35,7 @@ def seg_of(id_str):
 def relabel_to(s, target):
     """문자열 내 엔티티 ID(3토막)의 도메인세그 + 문서ID(POL-<code>)를 target으로 치환."""
     s = _ID_SEG.sub(lambda m: m.group(1) + target + m.group(3), s or "")
-    return _DOCID_RE.sub("POL-" + target, s)
+    return _DOCID_RE.sub(lambda m: "POL-" + target, s)
 
 
 def _walk(obj, target):
@@ -57,17 +59,11 @@ def normalize_spec_to(spec, target):
     return out
 
 
-def _has_domain_seg(i):
-    """도메인세그먼트를 가진 ID인가(PREFIX-SEG-rest, SEG=알파). ACT-001 같은 모듈-로컬
-    번호 스킴은 도메인코드 대상이 아니므로 R5 검사에서 제외(relabel_to도 이를 건드리지 않음)."""
-    parts = (i or "").split("-")
-    return len(parts) >= 3 and parts[1].isalpha()
-
-
 def scan_residual_segs(obj, target):
-    """obj(스펙 dict/list/str) 또는 HTML 문자열 전체를 재귀 순회하며, _ID_SEG 매치 중
-    도메인세그가 target과 다른 엔티티 ID를 수집한다. 숫자세그(ACT-001·PM-20 등 모듈-로컬)는
-    _ID_SEG가 애초에 매치하지 않으므로 자동 제외. dict 키도 검사한다.
+    """obj(스펙 dict/list/str) 또는 HTML 문자열 전체를 재귀 순회하며, _ID_SEG 매치(엔티티
+    3토막+ ID) 및 _DOCID_RE 매치(문서ID POL-<code>) 중 도메인세그가 target과 다른 ID를
+    수집한다. 숫자세그(ACT-001·PM-20 등 모듈-로컬)는 _ID_SEG가 애초에 매치하지 않으므로
+    자동 제외. dict 키도 검사한다.
     반환: [{"id": "<PREFIX-SEG(-rest)>", "seg": "<SEG>"}] (id 기준 중복제거·정렬)."""
     found = {}
 
