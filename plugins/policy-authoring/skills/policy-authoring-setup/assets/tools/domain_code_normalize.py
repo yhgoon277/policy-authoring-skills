@@ -14,9 +14,10 @@ import copy
 import re
 
 # 치환 대상 ID 접두(엔티티만 — 본문/설명의 임의 대문자열 오염 방지). ACT를 AC 앞에(명시 순서).
-_PREFIX = r"(?:UC|US|PR|FN|PG|PI|POL|ST|ACT|AC|TM)"
-# PREFIX-SEG-rest 형태에서 SEG만 캡처(뒤에 -... 가 반드시 옴; applies_to '...#3' 접미는 보존)
-_ID_SEG = re.compile(r"\b(" + _PREFIX + r"-)([A-Z0-9]+)(-[A-Z0-9\-]+)")
+# FC=final_check(검수 ID) 추가. SEG는 알파(도메인코드)만 → 숫자세그(ACT-001·PM-20 모듈-로컬)
+# 는 자동 제외. rest는 선택(POL-MYI 같은 2토막 문서ID도 매치). '#3' 등 접미는 group3에 보존.
+_PREFIX = r"(?:UC|US|PR|FN|PG|PI|POL|ST|ACT|AC|TM|FC)"
+_ID_SEG = re.compile(r"\b(" + _PREFIX + r"-)([A-Z]+)((?:-[A-Z0-9\-]+)?)")
 
 
 def seg_of(id_str):

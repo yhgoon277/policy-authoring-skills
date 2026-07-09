@@ -167,5 +167,23 @@ class DictKeyRelabel(unittest.TestCase):
                          {"평문 키": {"UC-CSHUB-CS-01": "값 PR-CSHUB-HUB-001"}})
 
 
+class FcAndTwoPartRelabel(unittest.TestCase):
+    """FC 접두 + 2토막 문서ID(POL-MYI) relabel, 숫자세그는 불변."""
+
+    def test_fc_prefix_relabels(self):
+        self.assertEqual(dcn.relabel_to("FC-MYI-QA-CASE", "INFO"), "FC-INFO-QA-CASE")
+
+    def test_two_part_document_id_relabels(self):
+        self.assertEqual(dcn.relabel_to("POL-MYI", "INFO"), "POL-INFO")
+
+    def test_numeric_seg_untouched(self):
+        self.assertEqual(dcn.relabel_to("ACT-001", "INFO"), "ACT-001")
+        self.assertEqual(dcn.relabel_to("PM-20", "INFO"), "PM-20")
+
+    def test_existing_three_part_still_relabels(self):
+        self.assertEqual(dcn.relabel_to("FN-OLD-001", "PAY"), "FN-PAY-001")
+        self.assertEqual(dcn.relabel_to("AC-CS-01", "CSHUB"), "AC-CSHUB-01")
+
+
 if __name__ == "__main__":
     unittest.main()
